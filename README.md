@@ -103,3 +103,22 @@ The frontend demo persists the latest issued certificate locally so the generate
 - **INVALID / NOT FOUND** — no record exists for the supplied ID
 
 For production, replace local demo persistence with PostgreSQL/Supabase and replace the demo blockchain flag with a real signed credential or blockchain transaction.
+
+
+## Phase 2 — Certificate integrity prototype
+
+The Phase 2 verification lifecycle is implemented in the frontend demo:
+
+**Issue → Unique ID → SHA-256 fingerprint → Unique QR URL → Verify → Compare proof → VALID / TAMPERED / REVOKED / INVALID**
+
+- Every newly issued certificate receives a unique `CC-YYYY-XXXXXX` identifier.
+- The QR code contains the certificate verification URL, not the full certificate data.
+- Issued certificates are retained in browser storage so multiple generated certificates can be verified by their own IDs.
+- SHA-256 is generated from the certificate identity and core credential fields.
+- The verification result resolves the certificate record before reporting a status.
+- Tamper simulation recalculates a changed credential fingerprint and displays the original/current mismatch.
+- Revocation stores a reason and revocation date while keeping the certificate record available for verification.
+- The issuer proof panel, certificate preview, share link and QR all use the same generated certificate ID and fingerprint.
+- The issuer's **Verify Certificate** action opens the exact generated certificate verification URL.
+
+> This is still a frontend/demo proof layer. Browser storage is intentionally used until Phase 3 backend/database integration. The displayed blockchain anchor is a prototype state, not a live blockchain transaction.
