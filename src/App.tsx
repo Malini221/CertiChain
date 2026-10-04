@@ -33,6 +33,8 @@ function VerifyPage({ onBack }: { onBack: () => void }) {
   const [certificateId, setCertificateId] = useState(demoCertificate.id);
   const [status, setStatus] = useState<VerificationState>("idle");
   const [demoTampered, setDemoTampered] = useState(false);
+  const [showCertificate, setShowCertificate] = useState(false);
+  const [shared, setShared] = useState(false);
 
   const verify = () => {
     setStatus("scanning");
@@ -123,7 +125,7 @@ function VerifyPage({ onBack }: { onBack: () => void }) {
             <div>
               <div className="big-status"><span className="status-icon"><Check size={34}/></span><div><p>VERIFICATION COMPLETE</p><h2>CERTIFICATE<br/><em>VERIFIED.</em></h2></div></div>
               <p className="result-copy">The submitted certificate matches the original cryptographic fingerprint anchored by the issuer.</p>
-              <div className="result-actions"><button onClick={()=>alert("Certificate preview ready for the next backend connection.")}>VIEW CERTIFICATE <ArrowUpRight size={17}/></button><button onClick={()=>alert("Verification link copied.")}>SHARE <ArrowUpRight size={17}/></button></div>
+              <div className="result-actions"><button onClick={()=>setShowCertificate(true)}>VIEW CERTIFICATE <ArrowUpRight size={17}/></button><button onClick={()=>{setShared(true);window.setTimeout(()=>setShared(false),1800)}}>SHARE <ArrowUpRight size={17}/></button>{shared && <motion.span className="share-toast" initial={{opacity:0,y:8}} animate={{opacity:1,y:0}}>LINK COPIED ✓</motion.span>}</div>
             </div>
             <CertificateProofCard certificate={demoCertificate} />
           </div>
@@ -131,7 +133,7 @@ function VerifyPage({ onBack }: { onBack: () => void }) {
         </motion.section>
       )}
 
-      {status === "tampered" && (
+      {showCertificate && <CertificatePreview onClose={()=>setShowCertificate(false)} />}\n\n      {status === "tampered" && (
         <motion.section className="verification-result tampered-result" initial={{opacity:0,y:35}} animate={{opacity:1,y:0}}>
           <div className="result-topline"><span>02 / INTEGRITY FAILURE</span><span className="status-pill bad"><X size={15}/> MISMATCH</span></div>
           <div className="result-grid">
@@ -175,6 +177,34 @@ function VerifyPage({ onBack }: { onBack: () => void }) {
 
       <footer className="verify-footer"><button onClick={onBack}>← CERTICHAIN</button><span>VERIFY ONCE. TRUST INSTANTLY.</span><span>SHA-256 · BLOCKCHAIN · QR</span></footer>
     </main>
+  );
+}
+
+
+function CertificatePreview({ onClose }: { onClose: () => void }) {
+  return (
+    <motion.div className="certificate-modal-backdrop" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} onClick={onClose}>
+      <motion.div className="certificate-modal" initial={{opacity:0,y:28,scale:.97}} animate={{opacity:1,y:0,scale:1}} transition={{duration:.35,ease:[.25,.1,.25,1]}} onClick={(e)=>e.stopPropagation()}>
+        <div className="certificate-modal-top">
+          <div><span>CERTICHAIN / VERIFIED DOCUMENT</span><h2>Certificate preview</h2></div>
+          <button onClick={onClose} aria-label="Close certificate preview"><X size={20}/></button>
+        </div>
+        <div className="certificate-sheet">
+          <div className="certificate-sheet-top"><span>CERTICHAIN</span><span>VERIFIED CREDENTIAL</span></div>
+          <div className="certificate-sheet-body">
+            <div className="certificate-seal"><Check size={30}/><span>VERIFIED</span></div>
+            <p className="certificate-overline">CERTIFICATE OF ACHIEVEMENT</p>
+            <h3>{demoCertificate.student}</h3>
+            <p>has successfully completed</p>
+            <strong>{demoCertificate.course}</strong>
+            <div className="certificate-grade"><span>FINAL GRADE</span><b>{demoCertificate.grade}</b></div>
+            <div className="certificate-meta"><span>ISSUED BY <b>{demoCertificate.issuer}</b></span><span>DATE <b>{demoCertificate.issued}</b></span><span>ID <b>{demoCertificate.id}</b></span></div>
+          </div>
+          <div className="certificate-sheet-bottom"><div className="certificate-hash"><span>SHA-256 FINGERPRINT</span><code>{demoCertificate.hash}</code></div><div className="certificate-qr"><QrCode size={62}/><span>SCAN TO VERIFY</span></div></div>
+        </div>
+        <div className="certificate-modal-actions"><button onClick={()=>{setShared(true);window.setTimeout(()=>setShared(false),1800)}}>SHARE PROOF <ArrowUpRight size={17}/></button><button className="dark-modal-button" onClick={onClose}>CLOSE PREVIEW</button>{shared && <span className="share-toast modal-toast">LINK COPIED ✓</span>}</div>
+      </motion.div>
+    </motion.div>
   );
 }
 
