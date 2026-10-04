@@ -545,7 +545,7 @@ export default function App() {
 
       <section className="problem section-pad">
         <div className="section-kicker">THE PROBLEM / 02</div>
-        <div className="split"><div><h2>A certificate can be copied.<br/><span>Its proof shouldn’t.</span></h2><p>PDFs can be edited. Screenshots can be reused. Manual checks slow down institutions and recruiters. CertiChain gives every certificate a verifiable digital fingerprint.</p></div><CertificateIllustration variant="problem"/></div>
+        <div className="split"><div><h2>A certificate can be copied.<br/><span>Its proof shouldn’t.</span></h2><p>PDFs can be edited. Screenshots can be reused. Manual checks slow down institutions and recruiters. CertiChain gives every certificate a verifiable digital fingerprint.</p></div><motion.div className="landing-proof-art" initial={{opacity:0,x:28}} whileInView={{opacity:1,x:0}} viewport={{once:true}} transition={{duration:.6,ease:"easeOut"}}><img src="https://stories.freepiklabs.com/storage/42120/secure-server-cuate-6555.png" alt="Secure server and digital security illustration" /></motion.div></div>
       </section>
 
       <section className="dark-section section-pad" id="how">
