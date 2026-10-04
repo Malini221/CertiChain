@@ -537,7 +537,7 @@ export default function App() {
           <div className="hero-actions"><button className="button button-dark route-button" onClick={() => { window.history.pushState({}, "", "/verify"); setRoute("/verify"); }}>VERIFY CERTIFICATE <ArrowUpRight size={18}/></button><button className="button button-light route-button" onClick={() => { window.history.pushState({}, "", "/issuer"); setRoute("/issuer"); }}>ISSUE CERTIFICATE</button></div>
           <div className="hero-proof"><ShieldCheck size={19}/><span>Cryptographic fingerprint + blockchain anchor</span></div>
         </motion.div>
-        <motion.div className="hero-art" initial={{opacity:0,scale:.94,y:20}} animate={{opacity:1,scale:1,y:0}} transition={{duration:.8,ease:"easeOut"}}><CertificateIllustration variant="hero"/></motion.div>
+        <motion.div className="hero-art exact-cuate" initial={{opacity:0,scale:.94,y:20}} animate={{opacity:1,scale:1,y:0}} transition={{duration:.8,ease:"easeOut"}}><img src="https://stories.freepiklabs.com/storage/48735/Certification_Mesa-de-trabajo-1.svg" alt="Certification illustration" /></motion.div>
         <div className="hero-number">01 / 08</div>
       </section>
 
