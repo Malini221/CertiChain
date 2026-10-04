@@ -1,5 +1,6 @@
 import { motion, useScroll, useTransform } from "framer-motion";
 import { ArrowUpRight, Check, Download, Menu, QrCode, RotateCcw, Share2, ShieldCheck, X } from "lucide-react";
+import QRCode from "qrcode";
 import { useEffect, useState } from "react";
 import { CertificateIllustration } from "./components/CertificateIllustration";
 
@@ -40,6 +41,28 @@ const generatedCertificate = {
   hash: "9f83d4a1...71ab",
 };
 
+async function sha256Fingerprint(value: string) {
+  const bytes = new TextEncoder().encode(value);
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+function verificationUrl(id: string) {
+  return `${window.location.origin}/verify/${encodeURIComponent(id)}`;
+}
+
+function CertificateQR({ id, size = 92 }: { id: string; size?: number }) {
+  const [src, setSrc] = useState("");
+  useEffect(() => {
+    let active = true;
+    QRCode.toDataURL(verificationUrl(id), { width: size, margin: 1 })
+      .then((url) => { if (active) setSrc(url); })
+      .catch(() => setSrc(""));
+    return () => { active = false; };
+  }, [id, size]);
+  return src ? <img src={src} width={size} height={size} alt={`QR verification code for ${id}`} /> : <QrCode size={size} />;
+}
+
 function certificatePrintWindow(certificate: typeof generatedCertificate) {
   const win = window.open("", "_blank", "width=900,height=700");
   if (!win) return false;
@@ -62,7 +85,7 @@ function certificatePrintWindow(certificate: typeof generatedCertificate) {
 }
 
 async function shareCertificate(certificate: typeof generatedCertificate) {
-  const url = `${window.location.origin}/verify?certificate=${encodeURIComponent(certificate.id)}`;
+  const url = verificationUrl(certificate.id);
   if (navigator.share) {
     await navigator.share({ title: "CertiChain certificate", text: `Verify ${certificate.id} on CertiChain`, url });
     return "shared";
@@ -103,9 +126,13 @@ function IssuerPage({ onBack }: { onBack: () => void }) {
   const [created, setCreated] = useState(false);
   const [toast, setToast] = useState("");
   const [showRevoke, setShowRevoke] = useState(false);
+  const [issuedCertificate, setIssuedCertificate] = useState(generatedCertificate);
 
-  const issue = () => {
+  const issue = async () => {
     if (!student.trim()) return;
+    const id = `CC-${new Date().getFullYear()}-${crypto.randomUUID().slice(0, 6).toUpperCase()}`;
+    const fingerprint = await sha256Fingerprint(JSON.stringify({ id, student, course, grade, issuer: "ABC Institute of Technology", issued }));
+    setIssuedCertificate({ id, student, course, grade, issuer: "ABC Institute of Technology", issued, hash: fingerprint });
     setStep("ready");
     setCreated(true);
   };
@@ -162,23 +189,23 @@ function IssuerPage({ onBack }: { onBack: () => void }) {
         {step==="ready" && <motion.div initial={{opacity:0,y:20}} animate={{opacity:1,y:0}}>
           <div className="ready-banner"><div><p className="eyebrow"><span/> Issuance complete</p><h1>CERTIFICATE<br/><em>READY.</em></h1><p>Your credential has a unique identity, a SHA-256 fingerprint and a blockchain anchor.</p></div><div className="ready-check"><Check size={34}/><span>ANCHORED</span></div></div>
           <div className="ready-grid">
-            <div className="issuer-panel generated-sheet"><div className="generated-top"><span>CERTICHAIN</span><span>VERIFIED CREDENTIAL</span></div><div className="generated-body"><div className="mini-seal"><Check size={24}/></div><small>{type.toUpperCase()}</small><h2>{student || "Arun Kumar"}</h2><p>has successfully completed</p><strong>{course}</strong><div className="generated-grade"><span>FINAL GRADE</span><b>{grade}</b></div><div className="generated-meta"><span>ISSUED BY <b>ABC Institute</b></span><span>DATE <b>{issued}</b></span><span>ID <b>CC-2026-0917</b></span></div></div><div className="generated-bottom"><div><span>SHA-256 FINGERPRINT</span><code>9f83d4a1...71ab</code></div><QrCode size={62}/></div></div>
-            <div className="ready-details"><div className="issuer-panel proof-status"><span>ISSUANCE PROOF</span><h2>Ready to trust.</h2>{[["CERTIFICATE ID","CC-2026-0917"],["SHA-256","9f83d4a1...71ab"],["BLOCKCHAIN","ANCHORED ✓"],["QR VERIFICATION","GENERATED ✓"]].map(x=><div key={x[0]}><span>{x[0]}</span><b>{x[1]}</b></div>)}</div><div className="ready-actions"><button onClick={()=>{const ok=certificatePrintWindow(generatedCertificate); if(ok){setToast("Print dialog opened — choose Save as PDF."); setTimeout(()=>setToast(""),2600)}}}><Download size={16}/> DOWNLOAD / PDF</button>
-              <button onClick={async()=>{try{const result=await shareCertificate(generatedCertificate);setToast(result==="shared"?"Share sheet opened.":"Verification link copied.");setTimeout(()=>setToast(""),2200)}catch{setToast("Sharing cancelled.");setTimeout(()=>setToast(""),1800)}}}><Share2 size={16}/> SHARE PROOF</button>
+            <div className="issuer-panel generated-sheet"><div className="generated-top"><span>CERTICHAIN</span><span>VERIFIED CREDENTIAL</span></div><div className="generated-body"><div className="mini-seal"><Check size={24}/></div><small>{type.toUpperCase()}</small><h2>{issuedCertificate.student}</h2><p>has successfully completed</p><strong>{issuedCertificate.course}</strong><div className="generated-grade"><span>FINAL GRADE</span><b>{issuedCertificate.grade}</b></div><div className="generated-meta"><span>ISSUED BY <b>{issuedCertificate.issuer}</b></span><span>DATE <b>{issuedCertificate.issued}</b></span><span>ID <b>{issuedCertificate.id}</b></span></div></div><div className="generated-bottom"><div><span>SHA-256 FINGERPRINT</span><code>{issuedCertificate.hash}</code></div><CertificateQR id={issuedCertificate.id} size={62}/></div></div>
+            <div className="ready-details"><div className="issuer-panel proof-status"><span>ISSUANCE PROOF</span><h2>Ready to trust.</h2>{[["CERTIFICATE ID","CC-2026-0917"],["SHA-256","9f83d4a1...71ab"],["BLOCKCHAIN","ANCHORED ✓"],["QR VERIFICATION","GENERATED ✓"]].map(x=><div key={x[0]}><span>{x[0]}</span><b>{x[1]}</b></div>)}</div><div className="ready-actions"><button onClick={()=>{const ok=certificatePrintWindow(issuedCertificate); if(ok){setToast("Print dialog opened — choose Save as PDF."); setTimeout(()=>setToast(""),2600)}}}><Download size={16}/> DOWNLOAD / PDF</button>
+              <button onClick={async()=>{try{const result=await shareCertificate(issuedCertificate);setToast(result==="shared"?"Share sheet opened.":"Verification link copied.");setTimeout(()=>setToast(""),2200)}catch{setToast("Sharing cancelled.");setTimeout(()=>setToast(""),1800)}}}><Share2 size={16}/> SHARE PROOF</button>
               <button className="dark" onClick={()=>{window.history.pushState({}, "", "/verify"); window.dispatchEvent(new PopStateEvent("popstate"))}}>VERIFY CERTIFICATE <ArrowUpRight size={16}/></button>
               <button onClick={()=>setShowRevoke(true)}><RotateCcw size={16}/> REVOKE CERTIFICATE</button>
               <button onClick={()=>setStep("dashboard")}>BACK TO DASHBOARD</button>
               {toast && <motion.div className="issuer-toast" initial={{opacity:0,y:8}} animate={{opacity:1,y:0}}>{toast}</motion.div>}
-              {showRevoke && <RevokeModal certificate={generatedCertificate} onClose={()=>setShowRevoke(false)} onRevoked={()=>{persistRevocation(generatedCertificate.id);setShowRevoke(false);setToast("Certificate revoked.");setTimeout(()=>setToast(""),2200)}}/>}</div></div></div>
+              {showRevoke && <RevokeModal certificate={issuedCertificate} onClose={()=>setShowRevoke(false)} onRevoked={()=>{persistRevocation(issuedCertificate.id);setShowRevoke(false);setToast("Certificate revoked.");setTimeout(()=>setToast(""),2200)}}/>}</div></div></div>
         </motion.div>}
       </div>
     </section>
   </main>;
 }
 
-function VerifyPage({ onBack }: { onBack: () => void }) {
+function VerifyPage({ onBack, initialCertificateId }: { onBack: () => void; initialCertificateId?: string }) {
   const [mode, setMode] = useState<"id" | "qr">("id");
-  const [certificateId, setCertificateId] = useState(demoCertificate.id);
+  const [certificateId, setCertificateId] = useState(initialCertificateId || demoCertificate.id);
   const [status, setStatus] = useState<VerificationState>("idle");
   const [demoTampered, setDemoTampered] = useState(false);
   const [showCertificate, setShowCertificate] = useState(false);
@@ -351,7 +378,7 @@ function CertificatePreview({ onClose }: { onClose: () => void }) {
             <div className="certificate-grade"><span>FINAL GRADE</span><b>{demoCertificate.grade}</b></div>
             <div className="certificate-meta"><span>ISSUED BY <b>{demoCertificate.issuer}</b></span><span>DATE <b>{demoCertificate.issued}</b></span><span>ID <b>{demoCertificate.id}</b></span></div>
           </div>
-          <div className="certificate-sheet-bottom"><div className="certificate-hash"><span>SHA-256 FINGERPRINT</span><code>{demoCertificate.hash}</code></div><div className="certificate-qr"><QrCode size={62}/><span>SCAN TO VERIFY</span></div></div>
+          <div className="certificate-sheet-bottom"><div className="certificate-hash"><span>SHA-256 FINGERPRINT</span><code>{demoCertificate.hash}</code></div><div className="certificate-qr"><CertificateQR id={demoCertificate.id} size={62}/><span>SCAN TO VERIFY</span></div></div>
         </div>
         <div className="certificate-modal-actions"><button onClick={()=>{setShared(true);window.setTimeout(()=>setShared(false),1800)}}>SHARE PROOF <ArrowUpRight size={17}/></button><button className="dark-modal-button" onClick={onClose}>CLOSE PREVIEW</button>{shared && <span className="share-toast modal-toast">LINK COPIED ✓</span>}</div>
       </motion.div>
@@ -385,7 +412,11 @@ export default function App() {
   const [footerMode, setFooterMode] = useState<keyof typeof footerModes>("verify");
   const { scrollYProgress } = useScroll();
 
-  if (route === "/verify") return <VerifyPage onBack={() => { window.history.pushState({}, "", "/"); setRoute("/"); }} />;
+  if (route === "/verify" || route.startsWith("/verify/")) {
+    const pathId = route.startsWith("/verify/") ? decodeURIComponent(route.slice("/verify/".length)) : "";
+    const queryId = new URLSearchParams(window.location.search).get("certificate") || "";
+    return <VerifyPage initialCertificateId={pathId || queryId || undefined} onBack={() => { window.history.pushState({}, "", "/"); setRoute("/"); }} />;
+  }
   if (route === "/issuer") return <IssuerPage onBack={() => { window.history.pushState({}, "", "/"); setRoute("/"); }} />;
   const heroY = useTransform(scrollYProgress, [0, 0.18], [0, -80]);
   const footer = footerModes[footerMode];
