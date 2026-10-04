@@ -43,7 +43,7 @@ export default function App() {
           <div className="hero-actions"><a className="button button-dark" href="#verify">VERIFY CERTIFICATE <ArrowUpRight size={18}/></a><a className="button button-light" href="#issue">ISSUE CERTIFICATE</a></div>
           <div className="hero-proof"><ShieldCheck size={19}/><span>Cryptographic fingerprint + blockchain anchor</span></div>
         </motion.div>
-        <motion.div className="hero-art exact-cuate" initial={{opacity:0,scale:.94,y:20}} animate={{opacity:1,scale:1,y:0}} transition={{duration:.8,ease:"easeOut"}}><img src="/Certification-cuate.svg" alt="Digital certificate verification illustration" /></motion.div>
+        <motion.div className="hero-art" initial={{opacity:0,scale:.94,y:20}} animate={{opacity:1,scale:1,y:0}} transition={{duration:.8,ease:"easeOut"}}><CertificateIllustration variant="hero"/></motion.div>
         <div className="hero-number">01 / 08</div>
       </section>
 
