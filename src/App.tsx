@@ -415,7 +415,7 @@ function VerifyPage({ onBack, initialCertificateId }: { onBack: () => void; init
               <p className="result-copy">The current document no longer matches the fingerprint originally anchored for this certificate.</p>
               <div className="hash-compare"><div><span>ORIGINAL FINGERPRINT</span><code>{(record || demoCertificate).hash}</code></div><div><span>CURRENT FINGERPRINT</span><code className="bad-code">{currentFingerprint}</code></div></div>
             </div>
-            <div className="tamper-visual"><CertificateIllustration variant="tamper"/><div className="tamper-stamp"><X size={18}/> HASH MISMATCH</div></div>
+            <motion.div className="tamper-visual tamper-exact-art" initial={{opacity:0,x:22}} animate={{opacity:1,x:0}} transition={{duration:.55,ease:"easeOut"}}><img src="https://stories.freepiklabs.com/storage/44311/Creative-team-%281%29_Mesa-de-trabajo-1.svg" alt="Creative team illustration" /><div className="tamper-stamp"><X size={18}/> HASH MISMATCH</div></motion.div>
           </div>
           <div className="demo-controls"><span>DEMO CONTROLS</span><button onClick={reset}>RESTORE ORIGINAL</button><button onClick={simulateRevoke}>SIMULATE REVOCATION <ArrowUpRight size={16}/></button></div>
         </motion.section>
