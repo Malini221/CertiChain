@@ -583,10 +583,13 @@ export default function App() {
             <div className="footer-tabs" role="tablist">
               {(Object.keys(footerModes) as Array<keyof typeof footerModes>).map((mode) => <button key={mode} className={footerMode===mode ? "active" : ""} onClick={()=>setFooterMode(mode)}>{footerModes[mode].label}</button>)}
             </div>
-            <motion.div key={footerMode} initial={{opacity:0,y:12}} animate={{opacity:1,y:0}} transition={{duration:.25}}>
-              <p className="footer-panel-kicker">CERTICHAIN / {footer.label}</p>
-              <h3>{footer.title}</h3><p>{footer.text}</p>
-              <button className="footer-action route-button" onClick={() => { window.history.pushState({}, "", footerMode==="issue" ? "/issuer" : "/verify"); setRoute(footerMode==="issue" ? "/issuer" : "/verify"); }}>{footer.action} <ArrowUpRight size={17}/></button>
+            <motion.div key={footerMode} className={footerMode==="verify" ? "footer-panel-content footer-verify-content" : "footer-panel-content"} initial={{opacity:0,y:12}} animate={{opacity:1,y:0}} transition={{duration:.25}}>
+              {footerMode==="verify" && <div className="footer-qr-illustration"><img src="/qr-code-amico.png" alt="QR code verification illustration" /></div>}
+              <div className="footer-panel-copy">
+                <p className="footer-panel-kicker">CERTICHAIN / {footer.label}</p>
+                <h3>{footer.title}</h3><p>{footer.text}</p>
+                <button className="footer-action route-button" onClick={() => { window.history.pushState({}, "", footerMode==="issue" ? "/issuer" : "/verify"); setRoute(footerMode==="issue" ? "/issuer" : "/verify"); }}>{footer.action} <ArrowUpRight size={17}/></button>
+              </div>
             </motion.div>
           </div>
         </div>
