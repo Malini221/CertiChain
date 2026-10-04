@@ -1,5 +1,5 @@
 import { motion, useScroll, useTransform } from "framer-motion";
-import { ArrowUpRight, Check, Menu, QrCode, ShieldCheck, X } from "lucide-react";
+import { ArrowUpRight, Check, Download, Menu, QrCode, RotateCcw, Share2, ShieldCheck, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { CertificateIllustration } from "./components/CertificateIllustration";
 
@@ -30,6 +30,68 @@ const demoCertificate = {
 
 type IssuerStep = "dashboard" | "issue" | "ready";
 
+const generatedCertificate = {
+  id: "CC-2026-0917",
+  student: "Arun Kumar",
+  course: "B.E. Computer Science",
+  grade: "A+",
+  issuer: "ABC Institute of Technology",
+  issued: "04 October 2026",
+  hash: "9f83d4a1...71ab",
+};
+
+function certificatePrintWindow(certificate: typeof generatedCertificate) {
+  const win = window.open("", "_blank", "width=900,height=700");
+  if (!win) return false;
+  win.document.write(`<!doctype html><html><head><title>${certificate.id} · CertiChain</title><style>
+  *{box-sizing:border-box}body{margin:0;background:#f4f4f1;font-family:Arial,sans-serif;color:#161B1E;padding:40px}
+  .sheet{max-width:780px;margin:auto;background:#fff;border:1px solid #dfe2df;padding:52px;text-align:center;box-shadow:12px 12px 0 #F6C92E}
+  .top{display:flex;justify-content:space-between;border-bottom:1px solid #ddd;padding-bottom:14px;font-size:12px;font-weight:800;letter-spacing:2px}
+  .seal{width:64px;height:64px;border-radius:50%;background:#F6C92E;display:grid;place-items:center;margin:42px auto 20px;font-size:28px}
+  h1{font-size:48px;margin:10px 0;letter-spacing:-2px}p{color:#68716f}.course{font-size:22px;font-weight:800;margin:12px 0 32px}
+  .meta{display:flex;justify-content:center;gap:30px;flex-wrap:wrap;border-top:1px solid #ddd;padding-top:20px;font-size:11px}
+  .hash{margin-top:35px;text-align:left;border-top:1px solid #ddd;padding-top:18px;font-size:11px}.hash code{display:block;margin-top:8px}
+  @media print{body{padding:0;background:#fff}.sheet{box-shadow:none;border:0;max-width:none}}
+  </style></head><body><div class="sheet"><div class="top"><span>CERTICHAIN</span><span>VERIFIED CREDENTIAL</span></div>
+  <div class="seal">✓</div><div style="font-size:11px;letter-spacing:2px;color:#777">CERTIFICATE OF ACHIEVEMENT</div>
+  <h1>${certificate.student}</h1><p>has successfully completed</p><div class="course">${certificate.course}</div>
+  <div class="meta"><span>ISSUED BY <b>${certificate.issuer}</b></span><span>DATE <b>${certificate.issued}</b></span><span>ID <b>${certificate.id}</b></span><span>GRADE <b>${certificate.grade}</b></span></div>
+  <div class="hash"><b>SHA-256 FINGERPRINT</b><code>${certificate.hash}</code></div></div><script>window.onload=()=>setTimeout(()=>window.print(),250)</script></body></html>`);
+  win.document.close();
+  return true;
+}
+
+async function shareCertificate(certificate: typeof generatedCertificate) {
+  const url = `${window.location.origin}/verify?certificate=${encodeURIComponent(certificate.id)}`;
+  if (navigator.share) {
+    await navigator.share({ title: "CertiChain certificate", text: `Verify ${certificate.id} on CertiChain`, url });
+    return "shared";
+  }
+  await navigator.clipboard?.writeText(url);
+  return "copied";
+}
+
+function persistRevocation(id: string) {
+  localStorage.setItem(`certichain:revoked:${id}`, "1");
+}
+function isPersistedRevoked(id: string) {
+  return localStorage.getItem(`certichain:revoked:${id}`) === "1";
+}
+
+function RevokeModal({ certificate, onClose, onRevoked }: { certificate: typeof generatedCertificate; onClose: ()=>void; onRevoked: ()=>void }) {
+  const [reason, setReason] = useState("Certificate withdrawn by issuing institution.");
+  return <motion.div className="revoke-backdrop" initial={{opacity:0}} animate={{opacity:1}}>
+    <motion.div className="revoke-modal" initial={{opacity:0,y:18,scale:.98}} animate={{opacity:1,y:0,scale:1}}>
+      <button className="modal-close" onClick={onClose}><X size={18}/></button>
+      <span className="verify-card-label">CERTICHAIN / REVOCATION</span>
+      <h2>STOP TRUST.</h2>
+      <p>Revoking <b>{certificate.id}</b> keeps its proof record but marks the credential as no longer valid.</p>
+      <label>Reason<select value={reason} onChange={e=>setReason(e.target.value)}><option>Certificate withdrawn by issuing institution.</option><option>Issued in error.</option><option>Credential replaced.</option><option>Administrative revocation.</option></select></label>
+      <div className="revoke-modal-actions"><button onClick={onClose}>CANCEL</button><button className="danger" onClick={onRevoked}>CONFIRM REVOCATION <X size={16}/></button></div>
+    </motion.div>
+  </motion.div>;
+}
+
 function IssuerPage({ onBack }: { onBack: () => void }) {
   const [step, setStep] = useState<IssuerStep>("dashboard");
   const [student, setStudent] = useState("");
@@ -39,6 +101,8 @@ function IssuerPage({ onBack }: { onBack: () => void }) {
   const [grade, setGrade] = useState("A+");
   const [issued, setIssued] = useState("04 October 2026");
   const [created, setCreated] = useState(false);
+  const [toast, setToast] = useState("");
+  const [showRevoke, setShowRevoke] = useState(false);
 
   const issue = () => {
     if (!student.trim()) return;
@@ -99,7 +163,13 @@ function IssuerPage({ onBack }: { onBack: () => void }) {
           <div className="ready-banner"><div><p className="eyebrow"><span/> Issuance complete</p><h1>CERTIFICATE<br/><em>READY.</em></h1><p>Your credential has a unique identity, a SHA-256 fingerprint and a blockchain anchor.</p></div><div className="ready-check"><Check size={34}/><span>ANCHORED</span></div></div>
           <div className="ready-grid">
             <div className="issuer-panel generated-sheet"><div className="generated-top"><span>CERTICHAIN</span><span>VERIFIED CREDENTIAL</span></div><div className="generated-body"><div className="mini-seal"><Check size={24}/></div><small>{type.toUpperCase()}</small><h2>{student || "Arun Kumar"}</h2><p>has successfully completed</p><strong>{course}</strong><div className="generated-grade"><span>FINAL GRADE</span><b>{grade}</b></div><div className="generated-meta"><span>ISSUED BY <b>ABC Institute</b></span><span>DATE <b>{issued}</b></span><span>ID <b>CC-2026-0917</b></span></div></div><div className="generated-bottom"><div><span>SHA-256 FINGERPRINT</span><code>9f83d4a1...71ab</code></div><QrCode size={62}/></div></div>
-            <div className="ready-details"><div className="issuer-panel proof-status"><span>ISSUANCE PROOF</span><h2>Ready to trust.</h2>{[["CERTIFICATE ID","CC-2026-0917"],["SHA-256","9f83d4a1...71ab"],["BLOCKCHAIN","ANCHORED ✓"],["QR VERIFICATION","GENERATED ✓"]].map(x=><div key={x[0]}><span>{x[0]}</span><b>{x[1]}</b></div>)}</div><div className="ready-actions"><button onClick={()=>alert("Certificate download is ready for backend PDF generation.")}>DOWNLOAD <ArrowUpRight size={16}/></button><button onClick={()=>alert("Verification link copied.")}>SHARE <ArrowUpRight size={16}/></button><button className="dark" onClick={()=>{window.history.pushState({}, "", "/verify"); location.reload()}}>VERIFY CERTIFICATE <ArrowUpRight size={16}/></button><button onClick={()=>setStep("dashboard")}>BACK TO DASHBOARD</button></div></div></div>
+            <div className="ready-details"><div className="issuer-panel proof-status"><span>ISSUANCE PROOF</span><h2>Ready to trust.</h2>{[["CERTIFICATE ID","CC-2026-0917"],["SHA-256","9f83d4a1...71ab"],["BLOCKCHAIN","ANCHORED ✓"],["QR VERIFICATION","GENERATED ✓"]].map(x=><div key={x[0]}><span>{x[0]}</span><b>{x[1]}</b></div>)}</div><div className="ready-actions"><button onClick={()=>{const ok=certificatePrintWindow(generatedCertificate); if(ok){setToast("Print dialog opened — choose Save as PDF."); setTimeout(()=>setToast(""),2600)}}}><Download size={16}/> DOWNLOAD / PDF</button>
+              <button onClick={async()=>{try{const result=await shareCertificate(generatedCertificate);setToast(result==="shared"?"Share sheet opened.":"Verification link copied.");setTimeout(()=>setToast(""),2200)}catch{setToast("Sharing cancelled.");setTimeout(()=>setToast(""),1800)}}}><Share2 size={16}/> SHARE PROOF</button>
+              <button className="dark" onClick={()=>{window.history.pushState({}, "", "/verify"); window.dispatchEvent(new PopStateEvent("popstate"))}}>VERIFY CERTIFICATE <ArrowUpRight size={16}/></button>
+              <button onClick={()=>setShowRevoke(true)}><RotateCcw size={16}/> REVOKE CERTIFICATE</button>
+              <button onClick={()=>setStep("dashboard")}>BACK TO DASHBOARD</button>
+              {toast && <motion.div className="issuer-toast" initial={{opacity:0,y:8}} animate={{opacity:1,y:0}}>{toast}</motion.div>}
+              {showRevoke && <RevokeModal certificate={generatedCertificate} onClose={()=>setShowRevoke(false)} onRevoked={()=>{persistRevocation(generatedCertificate.id);setShowRevoke(false);setToast("Certificate revoked.");setTimeout(()=>setToast(""),2200)}}/>}</div></div></div>
         </motion.div>}
       </div>
     </section>
@@ -113,11 +183,12 @@ function VerifyPage({ onBack }: { onBack: () => void }) {
   const [demoTampered, setDemoTampered] = useState(false);
   const [showCertificate, setShowCertificate] = useState(false);
   const [shared, setShared] = useState(false);
+  const [revoked, setRevoked] = useState(() => isPersistedRevoked(demoCertificate.id));
 
   const verify = () => {
     setStatus("scanning");
     window.setTimeout(() => setStatus("checking"), 700);
-    window.setTimeout(() => setStatus(demoTampered ? "tampered" : "valid"), 1700);
+    window.setTimeout(() => setStatus(revoked || isPersistedRevoked(demoCertificate.id) ? "revoked" : demoTampered ? "tampered" : "valid"), 1700);
   };
 
   const reset = () => {
@@ -134,6 +205,8 @@ function VerifyPage({ onBack }: { onBack: () => void }) {
 
   const simulateRevoke = () => {
     setDemoTampered(false);
+    persistRevocation(demoCertificate.id);
+    setRevoked(true);
     setStatus("checking");
     window.setTimeout(() => setStatus("revoked"), 900);
   };
@@ -203,7 +276,7 @@ function VerifyPage({ onBack }: { onBack: () => void }) {
             <div>
               <div className="big-status"><span className="status-icon"><Check size={34}/></span><div><p>VERIFICATION COMPLETE</p><h2>CERTIFICATE<br/><em>VERIFIED.</em></h2></div></div>
               <p className="result-copy">The submitted certificate matches the original cryptographic fingerprint anchored by the issuer.</p>
-              <div className="result-actions"><button onClick={()=>setShowCertificate(true)}>VIEW CERTIFICATE <ArrowUpRight size={17}/></button><button onClick={()=>{setShared(true);window.setTimeout(()=>setShared(false),1800)}}>SHARE <ArrowUpRight size={17}/></button>{shared && <motion.span className="share-toast" initial={{opacity:0,y:8}} animate={{opacity:1,y:0}}>LINK COPIED ✓</motion.span>}</div>
+              <div className="result-actions"><button onClick={()=>setShowCertificate(true)}>VIEW CERTIFICATE <ArrowUpRight size={17}/></button><button onClick={async()=>{try{const result=await shareCertificate(generatedCertificate);setShared(true);window.setTimeout(()=>setShared(false),1800)}catch{setShared(false)}}}><Share2 size={17}/> SHARE</button>{shared && <motion.span className="share-toast" initial={{opacity:0,y:8}} animate={{opacity:1,y:0}}>LINK COPIED ✓</motion.span>}</div>
             </div>
             <CertificateProofCard certificate={demoCertificate} />
           </div>
