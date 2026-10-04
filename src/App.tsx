@@ -10,11 +10,19 @@ const steps = [
   ["04", "VERIFY", "Anyone can scan or enter the ID and get an instant integrity result."],
 ];
 
+const footerModes = {
+  issue: { label: "ISSUE", title: "CREATE PROOF.", text: "Institutions create certificates with a unique identity and cryptographic fingerprint.", action: "Open issuer flow" },
+  verify: { label: "VERIFY", title: "CHECK WHAT'S REAL.", text: "Enter a certificate ID or scan a QR code to compare the document with its anchored proof.", action: "Start verification" },
+  revoke: { label: "REVOKE", title: "STOP TRUST WHEN NEEDED.", text: "If a credential should no longer be accepted, its verification state can be marked revoked.", action: "View revocation" },
+};
+
 export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [tampered, setTampered] = useState(false);
+  const [footerMode, setFooterMode] = useState<keyof typeof footerModes>("verify");
   const { scrollYProgress } = useScroll();
   const heroY = useTransform(scrollYProgress, [0, 0.18], [0, -80]);
+  const footer = footerModes[footerMode];
 
   return (
     <main className="site-shell">
@@ -35,7 +43,7 @@ export default function App() {
           <div className="hero-actions"><a className="button button-dark" href="#verify">VERIFY CERTIFICATE <ArrowUpRight size={18}/></a><a className="button button-light" href="#issue">ISSUE CERTIFICATE</a></div>
           <div className="hero-proof"><ShieldCheck size={19}/><span>Cryptographic fingerprint + blockchain anchor</span></div>
         </motion.div>
-        <div className="hero-art"><CertificateIllustration variant="hero"/></div>
+        <motion.div className="hero-art exact-cuate" initial={{opacity:0,scale:.94,y:20}} animate={{opacity:1,scale:1,y:0}} transition={{duration:.8,ease:"easeOut"}}><img src="/Certification-cuate.svg" alt="Digital certificate verification illustration" /></motion.div>
         <div className="hero-number">01 / 08</div>
       </section>
 
@@ -73,7 +81,23 @@ export default function App() {
 
       <section className="cta section-pad" id="verify"><div className="cta-art"><CertificateIllustration variant="verifier"/></div><div><div className="section-kicker">FINAL CHECK / 06</div><h2>TRUST IT.<br/><span>OR DON’T.</span></h2><p>Enter a certificate ID or scan its QR code. CertiChain checks the document against its original cryptographic proof.</p><a className="button button-dark" href="#verify-form">START VERIFICATION <ArrowUpRight size={18}/></a></div></section>
 
-      <section className="footer-cta section-pad" id="issue"><div className="footer-top"><span>CertiChain</span><span>Verify once. Trust instantly.</span></div><div className="footer-big">MAKE<br/><em>TRUST</em><br/>VERIFIABLE.</div><div className="footer-bottom"><span>© 2026 CertiChain</span><span>Issue · Verify · Revoke</span><span>Built for digital credentials</span></div></section>
+      <footer className="footer-cta section-pad" id="issue">
+        <div className="footer-top"><span>CertiChain</span><span>Verify once. Trust instantly.</span></div>
+        <div className="footer-interactive">
+          <div className="footer-big">MAKE<br/><em>TRUST</em><br/>VERIFIABLE.</div>
+          <div className="footer-panel">
+            <div className="footer-tabs" role="tablist">
+              {(Object.keys(footerModes) as Array<keyof typeof footerModes>).map((mode) => <button key={mode} className={footerMode===mode ? "active" : ""} onClick={()=>setFooterMode(mode)}>{footerModes[mode].label}</button>)}
+            </div>
+            <motion.div key={footerMode} initial={{opacity:0,y:12}} animate={{opacity:1,y:0}} transition={{duration:.25}}>
+              <p className="footer-panel-kicker">CERTICHAIN / {footer.label}</p>
+              <h3>{footer.title}</h3><p>{footer.text}</p>
+              <a href={footerMode==="issue" ? "#issue" : "#verify"} className="footer-action">{footer.action} <ArrowUpRight size={17}/></a>
+            </motion.div>
+          </div>
+        </div>
+        <div className="footer-bottom"><span>© 2026 CertiChain</span><span>Issue · Verify · Revoke</span><span>Built for digital credentials</span></div>
+      </footer>
     </main>
   );
 }
