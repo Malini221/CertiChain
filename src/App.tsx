@@ -279,7 +279,7 @@ function VerifyPage({ onBack, initialCertificateId }: { onBack: () => void; init
   const [showCertificate, setShowCertificate] = useState(false);
   const [shared, setShared] = useState(false);
   const [currentFingerprint, setCurrentFingerprint] = useState("");
-  const [record, setRecord = useState(() => loadCertificate(initialCertificateId || demoCertificate.id));
+  const [record, setRecord] = useState(() => loadCertificate(initialCertificateId || demoCertificate.id));
   const [revoked, setRevoked] = useState(() => isPersistedRevoked(initialCertificateId || demoCertificate.id));
   const revocation = record ? getRevocation(record.id) : null;
 
