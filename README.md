@@ -86,3 +86,20 @@ API endpoints:
 - `GET /api/certificates/:id/qr`
 
 The API currently uses an in-memory demo store so the complete issue → fingerprint → verify → revoke story can be demonstrated quickly. Replace the store with PostgreSQL/Supabase and the blockchain anchor with a testnet contract when moving beyond the prototype.
+
+
+## Certificate verification model
+
+Every issued certificate gets a unique ID such as `CC-2026-XXXXXX`. Its QR code contains only the verification URL:
+
+```
+/verify/<certificate-id>
+```
+
+The frontend demo persists the latest issued certificate locally so the generated QR remains verifiable after navigation or refresh. Verification resolves the ID to the stored certificate record and returns:
+- **VALID** — record exists and is active
+- **TAMPERED** — the demo integrity check detects a changed proof
+- **REVOKED** — the record exists but its status has been withdrawn
+- **INVALID / NOT FOUND** — no record exists for the supplied ID
+
+For production, replace local demo persistence with PostgreSQL/Supabase and replace the demo blockchain flag with a real signed credential or blockchain transaction.
