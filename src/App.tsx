@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
 import { CertificateIllustration } from "./components/CertificateIllustration";
 import { HolderPortal, VerifierPortal } from "./components/PortalPages";
+import { navigateTo, routerState } from "./router";
 
 const steps = [
   ["01", "ISSUE", "An institution creates a digital certificate with a unique identity."],
@@ -544,7 +545,6 @@ function VerifyPage({ onBack, initialCertificateId }: { onBack: () => void; init
 
 function CertificatePreview({ onClose, certificate = demoCertificate }: { onClose: () => void; certificate?: typeof demoCertificate }) {
   const [shared, setShared] = useState(false);
-
   return (
     <motion.div className="certificate-modal-backdrop" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} onClick={onClose}>
       <motion.div className="certificate-modal" initial={{opacity:0,y:28,scale:.97}} animate={{opacity:1,y:0,scale:1}} transition={{duration:.35,ease:[.25,.1,.25,1]}} onClick={(e)=>e.stopPropagation()}>
@@ -586,37 +586,42 @@ function CertificateProofCard({certificate,revoked=false}:{certificate:typeof de
 export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [route, setRoute] = useState(window.location.pathname);
+  routerState.setRoute = setRoute;
 
   useEffect(() => {
-    const onPop = () => setRoute(window.location.pathname);
-    window.addEventListener("popstate", onPop);
-    return () => window.removeEventListener("popstate", onPop);
+    const handlePopState = () => {
+      setRoute(window.location.pathname);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
   }, []);
 
   const [tampered, setTampered] = useState(false);
   const [footerMode, setFooterMode] = useState<keyof typeof footerModes>("verify");
   const { scrollYProgress } = useScroll();
+  const heroY = useTransform(scrollYProgress, [0, 0.18], [0, -80]);
 
   if (route === "/verify" || route.startsWith("/verify/")) {
     const pathId = route.startsWith("/verify/") ? decodeURIComponent(route.slice("/verify/".length)) : "";
     const queryId = new URLSearchParams(window.location.search).get("certificate") || "";
-    return <VerifyPage initialCertificateId={pathId || queryId || undefined} onBack={() => { navigateTo("/"); }} />;
+    return <VerifyPage initialCertificateId={pathId || queryId || undefined} onBack={() => navigateTo("/")} />;
   }
-  if (route === "/holder") return <HolderPortal onBack={() => { navigateTo("/"); }} />;
-  if (route === "/verifier") return <VerifierPortal onBack={() => { navigateTo("/"); }} />;
-  if (route === "/issuer") return <IssuerPage onBack={() => { navigateTo("/"); }} />;
+  if (route === "/holder") return <HolderPortal onBack={() => navigateTo("/")} />;
+  if (route === "/verifier") return <VerifierPortal onBack={() => navigateTo("/")} />;
+  if (route === "/issuer") return <IssuerPage onBack={() => navigateTo("/")} />;
   const heroY = useTransform(scrollYProgress, [0, 0.18], [0, -80]);
   const footer = footerModes[footerMode];
 
   return (
     <main className="site-shell">
       <nav className="nav">
-        <a href="#" className="brand"><span className="brand-mark">C</span><span>CertiChain</span></a>
+        <a href="/" onClick={(e) => { e.preventDefault(); navigateTo("/"); }} className="brand"><span className="brand-mark">C</span><span>CertiChain</span></a>
         <div className={`nav-links ${menuOpen ? "open" : ""}`}>
           <a href="#how">How it works</a><a href="#tamper">Tamper check</a><a href="#for">Built for</a>
-          <button className="nav-verify nav-route-button" onClick={() => { navigateTo("/verify"); }}>Verify certificate <ArrowUpRight size={17}/></button>
+          <button type="button" className="nav-verify nav-route-button" onClick={() => navigateTo("/verify")}>Verify certificate <ArrowUpRight size={17}/></button>
         </div>
-        <button className="menu-btn" onClick={() => setMenuOpen(!menuOpen)} aria-label="Toggle menu">{menuOpen ? <X/> : <Menu/>}</button>
+        <button type="button" className="menu-btn" onClick={() => setMenuOpen(!menuOpen)} aria-label="Toggle menu">{menuOpen ? <X/> : <Menu/>}</button>
       </nav>
 
       <section className="hero section-pad">

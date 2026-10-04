@@ -39,7 +39,7 @@ function CertificateQR({id,size=180}:{id:string;size?:number}){
   return src?<img src={src} width={size} height={size} alt={`QR verification code for ${id}`}/>:<QrCode size={Math.min(size,110)}/>;
 }
 
-function go(path:string){ window.history.pushState({}, "", path); window.dispatchEvent(new PopStateEvent("popstate")); }
+import { navigateTo } from "../router";
 
 function certificateUrl(id:string){ return window.location.origin+"/verify/"+encodeURIComponent(id); }
 
@@ -98,7 +98,7 @@ export function HolderPortal({ onBack }:{onBack:()=>void}) {
       <div className="portal-main">
         <div className="portal-heading">
           <div><p className="eyebrow"><span/> Personal credential wallet</p><h1>MY<br/><em>CERTIFICATES.</em></h1><p>Keep your credentials ready to share. Every certificate has its own verification proof.</p></div>
-          <button className="portal-dark" onClick={()=>go("/verify")}>VERIFY A CERTIFICATE <ArrowUpRight size={16}/></button>
+          <button className="portal-dark" onClick={()=>navigateTo("/verify")}>VERIFY A CERTIFICATE <ArrowUpRight size={16}/></button>
         </div>
 
         <div className="portal-stats"><div><span>ACTIVE</span><b>{certificates.filter(c=>!isRevoked(c.id)).length}</b><small>credentials</small></div><div><span>VERIFIED</span><b>24</b><small>public checks</small></div><div><span>TRUST</span><b>100%</b><small>current status</small></div></div>
@@ -112,7 +112,7 @@ export function HolderPortal({ onBack }:{onBack:()=>void}) {
               <div className="holder-proof"><ShieldCheck size={17}/><span>Cryptographic proof active</span><code>{selected.id}</code></div>
             </div>
             <div className="holder-actions">
-              <button className="portal-dark" onClick={()=>go("/verify/"+selected.id)}>VERIFY <ArrowUpRight size={15}/></button>
+              <button className="portal-dark" onClick={()=>navigateTo("/verify/"+selected.id)}>VERIFY <ArrowUpRight size={15}/></button>
               <button onClick={share}><Share2 size={15}/> SHARE {copied?"COPIED":""}</button>
               <button onClick={()=>printCertificate(selected)}><Download size={15}/> PRINT / PDF</button>
               <button onClick={()=>setShowQr(true)}><QrCode size={15}/> QR</button>
@@ -163,7 +163,7 @@ export function VerifierPortal({ onBack }:{onBack:()=>void}) {
       <motion.div className="verifier-panel" initial={{opacity:0,y:20}} animate={{opacity:1,y:0}}>
         <div className="verifier-panel-head"><span>VERIFICATION CENTER</span><QrCode size={24}/></div>
         {scanning?<div className="verifier-scan-state"><motion.div className="scan-frame" animate={{scale:[1,1.03,1]}} transition={{duration:.8,repeat:Infinity}}><QrCode size={115}/><span className="scan-line"/></motion.div><h2>SCANNING QR.</h2><p>Reading the credential verification link…</p></div>
-        :checked&&result?<div className="verifier-success"><div className="verifier-status"><Check size={24}/></div><span>AUTHENTIC CREDENTIAL</span><h2>VERIFIED.</h2><p>The certificate record matches its original cryptographic proof.</p><div className="verifier-record"><div><span>RECIPIENT</span><b>{result.name}</b></div><div><span>QUALIFICATION</span><b>{result.course}</b></div><div><span>ISSUER</span><b>{result.issuer}</b></div><div><span>CERTIFICATE ID</span><b>{result.id}</b></div></div><button className="verifier-action" onClick={()=>go("/verify/"+result.id)}>VIEW FULL PROOF <ArrowUpRight size={16}/></button></div>
+        :checked&&result?<div className="verifier-success"><div className="verifier-status"><Check size={24}/></div><span>AUTHENTIC CREDENTIAL</span><h2>VERIFIED.</h2><p>The certificate record matches its original cryptographic proof.</p><div className="verifier-record"><div><span>RECIPIENT</span><b>{result.name}</b></div><div><span>QUALIFICATION</span><b>{result.course}</b></div><div><span>ISSUER</span><b>{result.issuer}</b></div><div><span>CERTIFICATE ID</span><b>{result.id}</b></div></div><button className="verifier-action" onClick={()=>navigateTo("/verify/"+result.id)}>VIEW FULL PROOF <ArrowUpRight size={16}/></button></div>
         :checked?<div className="verifier-fail"><div className="verifier-fail-icon">!</div><span>NO MATCH FOUND</span><h2>NOT VERIFIED.</h2><p>We couldn't find an active certificate with that ID. Check the ID and try again.</p><button onClick={()=>{setQuery("");setChecked(false)}}>TRY AGAIN</button></div>
         :<div className="verifier-empty"><div className="qr-large"><QrCode size={110}/></div><h2>SCAN OR SEARCH.</h2><p>Enter a certificate ID above, or use the QR code printed on the credential.</p><div className="proof-row"><span><ShieldCheck size={14}/> SHA-256</span><span><Check size={14}/> STATUS CHECK</span></div></div>}
       </motion.div>
