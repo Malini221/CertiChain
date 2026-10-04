@@ -95,28 +95,60 @@ async function shareCertificate(certificate: typeof generatedCertificate) {
 }
 
 function saveIssuedCertificate(certificate: typeof generatedCertificate) {
-  localStorage.setItem("certichain:latest-certificate", JSON.stringify(certificate));
+  try {
+    const raw = localStorage.getItem("certichain:certificates");
+    const existing = raw ? JSON.parse(raw) : [];
+    const next = Array.isArray(existing)
+      ? [...existing.filter((item) => item?.id !== certificate.id), certificate]
+      : [certificate];
+    localStorage.setItem("certichain:certificates", JSON.stringify(next));
+    localStorage.setItem("certichain:latest-certificate", JSON.stringify(certificate));
+  } catch {}
 }
+
 function loadCertificate(id: string) {
   if (id === demoCertificate.id) return demoCertificate;
   try {
-    const raw = localStorage.getItem("certichain:latest-certificate");
-    if (raw) {
-      const parsed = JSON.parse(raw);
+    const raw = localStorage.getItem("certichain:certificates");
+    const certificates = raw ? JSON.parse(raw) : [];
+    if (Array.isArray(certificates)) {
+      const match = certificates.find((item) => item?.id === id);
+      if (match) return match;
+    }
+    const latest = localStorage.getItem("certichain:latest-certificate");
+    if (latest) {
+      const parsed = JSON.parse(latest);
       if (parsed.id === id) return parsed;
     }
   } catch {}
   return null;
 }
 
-function persistRevocation(id: string) {
-  localStorage.setItem(`certichain:revoked:${id}`, "1");
-}
-function isPersistedRevoked(id: string) {
-  return localStorage.getItem(`certichain:revoked:${id}`) === "1";
+function persistRevocation(id: string, reason = "Certificate withdrawn by issuing institution.") {
+  localStorage.setItem(`certichain:revoked:${id}`, JSON.stringify({
+    revoked: true,
+    reason,
+    date: new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" }),
+  }));
 }
 
-function RevokeModal({ certificate, onClose, onRevoked }: { certificate: typeof generatedCertificate; onClose: ()=>void; onRevoked: ()=>void }) {
+function getRevocation(id: string) {
+  try {
+    const raw = localStorage.getItem(`certichain:revoked:${id}`);
+    if (!raw) return null;
+    if (raw === "1") return { revoked: true, reason: "Certificate withdrawn by issuing institution.", date: "04 October 2026" };
+    const parsed = JSON.parse(raw);
+    return parsed?.revoked ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function isPersistedRevoked(id: string) {
+  return Boolean(getRevocation(id));
+}
+
+function RevokeModal({ certificate, onClose, onRevoked }: { certificate: typeof generatedCertificate; onClose: ()=>void; onRevoked: (reason: string)=>void }) {
   const [reason, setReason] = useState("Certificate withdrawn by issuing institution.");
   return <motion.div className="revoke-backdrop" initial={{opacity:0}} animate={{opacity:1}}>
     <motion.div className="revoke-modal" initial={{opacity:0,y:18,scale:.98}} animate={{opacity:1,y:0,scale:1}}>
@@ -125,7 +157,7 @@ function RevokeModal({ certificate, onClose, onRevoked }: { certificate: typeof 
       <h2>STOP TRUST.</h2>
       <p>Revoking <b>{certificate.id}</b> keeps its proof record but marks the credential as no longer valid.</p>
       <label>Reason<select value={reason} onChange={e=>setReason(e.target.value)}><option>Certificate withdrawn by issuing institution.</option><option>Issued in error.</option><option>Credential replaced.</option><option>Administrative revocation.</option></select></label>
-      <div className="revoke-modal-actions"><button onClick={onClose}>CANCEL</button><button className="danger" onClick={onRevoked}>CONFIRM REVOCATION <X size={16}/></button></div>
+      <div className="revoke-modal-actions"><button onClick={onClose}>CANCEL</button><button className="danger" onClick={()=>onRevoked(reason)}>CONFIRM REVOCATION <X size={16}/></button></div>
     </motion.div>
   </motion.div>;
 }
@@ -207,13 +239,13 @@ function IssuerPage({ onBack }: { onBack: () => void }) {
           <div className="ready-banner"><div><p className="eyebrow"><span/> Issuance complete</p><h1>CERTIFICATE<br/><em>READY.</em></h1><p>Your credential has a unique identity, a SHA-256 fingerprint and a blockchain anchor.</p></div><div className="ready-check"><Check size={34}/><span>ANCHORED</span></div></div>
           <div className="ready-grid">
             <div className="issuer-panel generated-sheet"><div className="generated-top"><span>CERTICHAIN</span><span>VERIFIED CREDENTIAL</span></div><div className="generated-body"><div className="mini-seal"><Check size={24}/></div><small>{type.toUpperCase()}</small><h2>{issuedCertificate.student}</h2><p>has successfully completed</p><strong>{issuedCertificate.course}</strong><div className="generated-grade"><span>FINAL GRADE</span><b>{issuedCertificate.grade}</b></div><div className="generated-meta"><span>ISSUED BY <b>{issuedCertificate.issuer}</b></span><span>DATE <b>{issuedCertificate.issued}</b></span><span>ID <b>{issuedCertificate.id}</b></span></div></div><div className="generated-bottom"><div><span>SHA-256 FINGERPRINT</span><code>{issuedCertificate.hash}</code></div><CertificateQR id={issuedCertificate.id} size={62}/></div></div>
-            <div className="ready-details"><div className="issuer-panel proof-status"><span>ISSUANCE PROOF</span><h2>Ready to trust.</h2>{[["CERTIFICATE ID","CC-2026-0917"],["SHA-256","9f83d4a1...71ab"],["BLOCKCHAIN","ANCHORED ✓"],["QR VERIFICATION","GENERATED ✓"]].map(x=><div key={x[0]}><span>{x[0]}</span><b>{x[1]}</b></div>)}</div><div className="ready-actions"><button onClick={()=>{const ok=certificatePrintWindow(issuedCertificate); if(ok){setToast("Print dialog opened — choose Save as PDF."); setTimeout(()=>setToast(""),2600)}}}><Download size={16}/> DOWNLOAD / PDF</button>
+            <div className="ready-details"><div className="issuer-panel proof-status"><span>ISSUANCE PROOF</span><h2>Ready to trust.</h2>{[["CERTIFICATE ID", issuedCertificate.id],["SHA-256", issuedCertificate.hash],["BLOCKCHAIN","ANCHORED ✓"],["QR VERIFICATION","GENERATED ✓"]].map(x=><div key={x[0]}><span>{x[0]}</span><b>{x[1]}</b></div>)}</div><div className="ready-actions"><button onClick={()=>{const ok=certificatePrintWindow(issuedCertificate); if(ok){setToast("Print dialog opened — choose Save as PDF."); setTimeout(()=>setToast(""),2600)}}}><Download size={16}/> DOWNLOAD / PDF</button>
               <button onClick={async()=>{try{const result=await shareCertificate(issuedCertificate);setToast(result==="shared"?"Share sheet opened.":"Verification link copied.");setTimeout(()=>setToast(""),2200)}catch{setToast("Sharing cancelled.");setTimeout(()=>setToast(""),1800)}}}><Share2 size={16}/> SHARE PROOF</button>
-              <button className="dark" onClick={()=>{window.history.pushState({}, "", "/verify"); window.dispatchEvent(new PopStateEvent("popstate"))}}>VERIFY CERTIFICATE <ArrowUpRight size={16}/></button>
+              <button className="dark" onClick={()=>{window.history.pushState({}, "", verificationUrl(issuedCertificate.id)); window.dispatchEvent(new PopStateEvent("popstate"))}}>VERIFY CERTIFICATE <ArrowUpRight size={16}/></button>
               <button onClick={()=>setShowRevoke(true)}><RotateCcw size={16}/> REVOKE CERTIFICATE</button>
               <button onClick={()=>setStep("dashboard")}>BACK TO DASHBOARD</button>
               {toast && <motion.div className="issuer-toast" initial={{opacity:0,y:8}} animate={{opacity:1,y:0}}>{toast}</motion.div>}
-              {showRevoke && <RevokeModal certificate={issuedCertificate} onClose={()=>setShowRevoke(false)} onRevoked={()=>{persistRevocation(issuedCertificate.id);setShowRevoke(false);setToast("Certificate revoked.");setTimeout(()=>setToast(""),2200)}}/>}</div></div></div>
+              {showRevoke && <RevokeModal certificate={issuedCertificate} onClose={()=>setShowRevoke(false)} onRevoked={(reason)=>{persistRevocation(issuedCertificate.id, reason);setShowRevoke(false);setToast("Certificate revoked.");setTimeout(()=>setToast(""),2200)}}/>}</div></div></div>
         </motion.div>}
       </div>
     </section>
@@ -229,6 +261,7 @@ function VerifyPage({ onBack, initialCertificateId }: { onBack: () => void; init
   const [shared, setShared] = useState(false);
   const [record, setRecord] = useState(() => loadCertificate(initialCertificateId || demoCertificate.id));
   const [revoked, setRevoked] = useState(() => isPersistedRevoked(initialCertificateId || demoCertificate.id));
+  const revocation = record ? getRevocation(record.id) : null;
 
   const verify = () => {
     const found = loadCertificate(certificateId);
@@ -239,7 +272,7 @@ function VerifyPage({ onBack, initialCertificateId }: { onBack: () => void; init
       if (!found) return setStatus("invalid");
       const isRevoked = isPersistedRevoked(found.id);
       setRevoked(isRevoked);
-      setStatus(isRevoked ? "revoked" : demoTampered && found.id === demoCertificate.id ? "tampered" : "valid");
+      setStatus(isRevoked ? "revoked" : demoTampered ? "tampered" : "valid");
     }, 1700);
   };
 
@@ -258,7 +291,7 @@ function VerifyPage({ onBack, initialCertificateId }: { onBack: () => void; init
 
   const simulateRevoke = () => {
     setDemoTampered(false);
-    persistRevocation(demoCertificate.id);
+    persistRevocation(demoCertificate.id, "Certificate withdrawn by issuing institution.");
     setRevoked(true);
     setStatus("checking");
     window.setTimeout(() => setStatus("revoked"), 900);
@@ -337,7 +370,7 @@ function VerifyPage({ onBack, initialCertificateId }: { onBack: () => void; init
             <div>
               <div className="big-status"><span className="status-icon"><Check size={34}/></span><div><p>VERIFICATION COMPLETE</p><h2>CERTIFICATE<br/><em>VERIFIED.</em></h2></div></div>
               <p className="result-copy">The submitted certificate matches the original cryptographic fingerprint anchored by the issuer.</p>
-              <div className="result-actions"><button onClick={()=>setShowCertificate(true)}>VIEW CERTIFICATE <ArrowUpRight size={17}/></button><button onClick={async()=>{try{const result=await shareCertificate(generatedCertificate);setShared(true);window.setTimeout(()=>setShared(false),1800)}catch{setShared(false)}}}><Share2 size={17}/> SHARE</button>{shared && <motion.span className="share-toast" initial={{opacity:0,y:8}} animate={{opacity:1,y:0}}>LINK COPIED ✓</motion.span>}</div>
+              <div className="result-actions"><button onClick={()=>setShowCertificate(true)}>VIEW CERTIFICATE <ArrowUpRight size={17}/></button><button onClick={async()=>{try{const result=await shareCertificate(record || demoCertificate);setShared(true);window.setTimeout(()=>setShared(false),1800)}catch{setShared(false)}}}><Share2 size={17}/> SHARE</button>{shared && <motion.span className="share-toast" initial={{opacity:0,y:8}} animate={{opacity:1,y:0}}>LINK COPIED ✓</motion.span>}</div>
             </div>
             <CertificateProofCard certificate={record || demoCertificate} />
           </div>
@@ -352,7 +385,7 @@ function VerifyPage({ onBack, initialCertificateId }: { onBack: () => void; init
             <div>
               <div className="big-status"><span className="status-icon bad-icon"><X size={34}/></span><div><p>INTEGRITY CHECK FAILED</p><h2>TAMPER<br/><em>DETECTED.</em></h2></div></div>
               <p className="result-copy">The current document no longer matches the fingerprint originally anchored for this certificate.</p>
-              <div className="hash-compare"><div><span>ORIGINAL FINGERPRINT</span><code>{certificate.hash}</code></div><div><span>CURRENT FINGERPRINT</span><code className="bad-code">4b12a7c4...91aa</code></div></div>
+              <div className="hash-compare"><div><span>ORIGINAL FINGERPRINT</span><code>{(record || demoCertificate).hash}</code></div><div><span>CURRENT FINGERPRINT</span><code className="bad-code">{(record || demoCertificate).id === demoCertificate.id ? "4b12a7c4...91aa" : "HASH MISMATCH — DOCUMENT CHANGED"}</code></div></div>
             </div>
             <div className="tamper-visual"><CertificateIllustration variant="tamper"/><div className="tamper-stamp"><X size={18}/> HASH MISMATCH</div></div>
           </div>
@@ -367,7 +400,7 @@ function VerifyPage({ onBack, initialCertificateId }: { onBack: () => void; init
             <div>
               <div className="big-status"><span className="status-icon revoked-icon"><X size={34}/></span><div><p>PROOF MATCHED / STATUS FAILED</p><h2>CERTIFICATE<br/><em>REVOKED.</em></h2></div></div>
               <p className="result-copy">The certificate is authentic, but the issuing institution has withdrawn its validity.</p>
-              <div className="revocation-box"><strong>Revoked on 18 September 2026</strong><span>Reason: Certificate withdrawn by issuing institution.</span></div>
+              <div className="revocation-box"><strong>Revoked on {revocation?.date || "04 October 2026"}</strong><span>Reason: {revocation?.reason || "Certificate withdrawn by issuing institution."}</span></div>
             </div>
             <CertificateProofCard certificate={record || demoCertificate} revoked/>
           </div>
@@ -412,7 +445,7 @@ function CertificatePreview({ onClose, certificate = demoCertificate }: { onClos
             <div className="certificate-grade"><span>FINAL GRADE</span><b>{certificate.grade}</b></div>
             <div className="certificate-meta"><span>ISSUED BY <b>{certificate.issuer}</b></span><span>DATE <b>{certificate.issued}</b></span><span>ID <b>{certificate.id}</b></span></div>
           </div>
-          <div className="certificate-sheet-bottom"><div className="certificate-hash"><span>SHA-256 FINGERPRINT</span><code>{demoCertificate.hash}</code></div><div className="certificate-qr"><CertificateQR id={certificate.id} size={62}/><span>SCAN TO VERIFY</span></div></div>
+          <div className="certificate-sheet-bottom"><div className="certificate-hash"><span>SHA-256 FINGERPRINT</span><code>{certificate.hash}</code></div><div className="certificate-qr"><CertificateQR id={certificate.id} size={62}/><span>SCAN TO VERIFY</span></div></div>
         </div>
         <div className="certificate-modal-actions"><button onClick={()=>{setShared(true);window.setTimeout(()=>setShared(false),1800)}}>SHARE PROOF <ArrowUpRight size={17}/></button><button className="dark-modal-button" onClick={onClose}>CLOSE PREVIEW</button>{shared && <span className="share-toast modal-toast">LINK COPIED ✓</span>}</div>
       </motion.div>
