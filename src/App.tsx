@@ -125,6 +125,16 @@ function saveIssuedCertificate(certificate: typeof generatedCertificate) {
   } catch {}
 }
 
+function getStoredCertificates() {
+  try {
+    const raw = localStorage.getItem("certichain:certificates");
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 function loadCertificate(id: string) {
   if (id === demoCertificate.id) return demoCertificate;
   try {
@@ -193,6 +203,13 @@ function IssuerPage({ onBack }: { onBack: () => void }) {
   const [toast, setToast] = useState("");
   const [showRevoke, setShowRevoke] = useState(false);
   const [issuedCertificate, setIssuedCertificate] = useState(generatedCertificate);
+  const [dashboardCertificates, setDashboardCertificates] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (step === "dashboard") {
+      setDashboardCertificates(getStoredCertificates());
+    }
+  }, [step]);
 
   const issue = async () => {
     if (!student.trim()) return;
@@ -225,12 +242,23 @@ function IssuerPage({ onBack }: { onBack: () => void }) {
         {step==="dashboard" && <motion.div initial={{opacity:0,y:20}} animate={{opacity:1,y:0}}>
           <div className="issuer-heading"><div><p className="eyebrow"><span/> Institution workspace</p><h1>ISSUER<br/><em>DASHBOARD.</em></h1><p>Issue, track and manage trusted digital credentials from one place.</p></div><button className="issue-primary" onClick={()=>setStep("issue")}>+ ISSUE NEW CERTIFICATE <ArrowUpRight size={17}/></button></div>
           <div className="issuer-stats">
-            {[["1,284","Total issued","↑ 12% this month"],["1,241","Active","96.6% of issued"],["43","Revoked","3.4% of issued"],["8,492","Verifications","↑ 18% this month"]].map(([v,l,s],i)=><motion.div key={l} initial={{opacity:0,y:15}} animate={{opacity:1,y:0}} transition={{delay:i*.08}}><span>{l}</span><strong>{v}</strong><small>{s}</small></motion.div>)}
+            {[
+              [String(1284 + dashboardCertificates.length), "Total issued", dashboardCertificates.length ? `+ ${dashboardCertificates.length} in this demo` : "Demo institution record"],
+              [String(1241 + dashboardCertificates.filter(c => !isPersistedRevoked(c.id)).length), "Active", "Currently trusted"],
+              [String(43 + dashboardCertificates.filter(c => isPersistedRevoked(c.id)).length), "Revoked", "Marked unavailable"],
+              ["8,492", "Verifications", "Verification checks"]
+            ].map(([v,l,s],i)=><motion.div key={l} initial={{opacity:0,y:15}} animate={{opacity:1,y:0}} transition={{delay:i*.08}}><span>{l}</span><strong>{v}</strong><small>{s}</small></motion.div>)}
           </div>
           <div className="issuer-main-grid">
             <div className="issuer-panel"><div className="panel-title"><div><span>RECENT CERTIFICATES</span><h2>Latest issued</h2></div><button onClick={()=>setStep("issue")}>Issue new <ArrowUpRight size={15}/></button></div>
               <div className="certificate-list">
-                {[["Arun Kumar","B.E. Computer Science","CC-2026-0842","A+","ACTIVE"],["Meera Priya","B.Sc. Information Technology","CC-2026-0839","A","ACTIVE"],["Rahul Dev","B.E. Cyber Security","CC-2026-0827","A+","ACTIVE"],["Nila Shree","BCA","CC-2026-0814","B+","REVOKED"]].map((x,i)=><div className="certificate-row" key={x[2]}><div className="row-index">0{i+1}</div><div className="row-person"><b>{x[0]}</b><span>{x[1]}</span></div><code>{x[2]}</code><strong>{x[3]}</strong><span className={x[4]==="ACTIVE"?"row-status active":"row-status revoked"}>{x[4]}</span><button onClick={()=>setStep("ready")}><ArrowUpRight size={16}/></button></div>)}
+                {[
+                  ["Arun Kumar","B.E. Computer Science","CC-2026-0842","A+","ACTIVE"],
+                  ["Meera Priya","B.Sc. Information Technology","CC-2026-0839","A","ACTIVE"],
+                  ["Rahul Dev","B.E. Cyber Security","CC-2026-0827","A+","ACTIVE"],
+                  ["Nila Shree","BCA","CC-2026-0814","B+","REVOKED"],
+                  ...dashboardCertificates.map(c => [c.student, c.course, c.id, c.grade, isPersistedRevoked(c.id) ? "REVOKED" : "ACTIVE"])
+                ].map((x,i)=><div className="certificate-row" key={x[2]}><div className="row-index">{String(i+1).padStart(2,"0")}</div><div className="row-person"><b>{x[0]}</b><span>{x[1]}</span></div><code>{x[2]}</code><strong>{x[3]}</strong><span className={x[4]==="ACTIVE"?"row-status active":"row-status revoked"}>{x[4]}</span><button onClick={()=>{ const found=dashboardCertificates.find(c=>c.id===x[2]); if(found){setIssuedCertificate(found);setCreated(true);} setStep(found?"ready":"dashboard"); }}><ArrowUpRight size={16}/></button></div>)
               </div>
             </div>
             <div className="issuer-panel issuer-side-panel"><div className="panel-title"><div><span>VERIFICATION ACTIVITY</span><h2>Today</h2></div></div><div className="activity-number">284</div><p>public verification checks</p><div className="activity-bars">{[42,68,53,84,61,76,92].map((h,i)=><span key={i} style={{height:`${h}%`}}/>)}</div><div className="activity-footer"><span>Blockchain matches</span><b>98.7%</b></div></div>
@@ -415,7 +443,7 @@ function VerifyPage({ onBack, initialCertificateId }: { onBack: () => void; init
               <p className="result-copy">The current document no longer matches the fingerprint originally anchored for this certificate.</p>
               <div className="hash-compare"><div><span>ORIGINAL FINGERPRINT</span><code>{(record || demoCertificate).hash}</code></div><div><span>CURRENT FINGERPRINT</span><code className="bad-code">{currentFingerprint}</code></div></div>
             </div>
-            <motion.div className="tamper-visual tamper-exact-art" initial={{opacity:0,x:22}} animate={{opacity:1,x:0}} transition={{duration:.55,ease:"easeOut"}}><img src="https://stories.freepiklabs.com/storage/44311/Creative-team-%281%29_Mesa-de-trabajo-1.svg" alt="Creative team illustration" /><div className="tamper-stamp"><X size={18}/> HASH MISMATCH</div></motion.div>
+            <motion.div className="tamper-visual tamper-exact-art" initial={{opacity:0,x:22}} animate={{opacity:1,x:0}} transition={{duration:.55,ease:"easeOut"}}><img src="/creative-team-cuate.png" alt="Creative team illustration" /><div className="tamper-stamp"><X size={18}/> HASH MISMATCH</div></motion.div>
           </div>
           <div className="demo-controls"><span>DEMO CONTROLS</span><button onClick={reset}>RESTORE ORIGINAL</button><button onClick={simulateRevoke}>SIMULATE REVOCATION <ArrowUpRight size={16}/></button></div>
         </motion.section>
