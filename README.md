@@ -37,3 +37,52 @@ The illustration system now follows the supplied Pana / Cuate / Rafiki-style ref
 - Subtle Framer Motion floating and entrance movement
 
 The same visual language is intended for future Verify, Issuer and certificate-detail screens so the product feels like one consistent system.
+
+
+## Completed product flow
+
+### Public verification
+- Certificate ID verification
+- QR verification interface
+- Animated verification states
+- VALID / TAMPERED / REVOKED results
+- SHA-256 original vs current fingerprint comparison
+- Certificate preview modal
+- Share proof link
+- Tamper simulation and revocation simulation
+
+### Issuer portal
+- Issuer dashboard with issuance and verification statistics
+- Recent certificate list
+- Issue certificate form with live preview
+- Generated certificate identity and SHA-256 fingerprint
+- Print-to-PDF certificate download flow
+- Native share / clipboard fallback
+- Revocation confirmation modal
+- Verification handoff without a page reload
+
+### API
+A small Express API is included in `server/index.mjs` for the hackathon demo.
+
+Run the frontend:
+```bash
+npm install
+npm run dev
+```
+
+Run the API in a second terminal:
+```bash
+npm run server
+```
+
+API endpoints:
+- `GET /api/health`
+- `GET /api/dashboard/stats`
+- `GET /api/certificates`
+- `GET /api/certificates/:id`
+- `POST /api/certificates`
+- `GET /api/verify/:id`
+- `PATCH /api/certificates/:id/revoke`
+- `GET /api/certificates/:id/qr`
+
+The API currently uses an in-memory demo store so the complete issue → fingerprint → verify → revoke story can be demonstrated quickly. Replace the store with PostgreSQL/Supabase and the blockchain anchor with a testnet contract when moving beyond the prototype.
