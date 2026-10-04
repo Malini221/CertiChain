@@ -1,124 +1,201 @@
 # CertiChain
-Verify once. Trust instantly.
 
-## Landing page
-The current frontend is an editorial, full-width certificate verification experience inspired by the supplied video reference and the supplied Certification-cuate illustration style.
+### Verify Once. Trust Instantly.
 
-Visual system:
-- White / warm yellow / charcoal
-- Large editorial typography
-- Flat hand-drawn vector certificate illustrations
-- Framer Motion scroll and entrance motion
-- Responsive desktop-to-mobile layout
+CertiChain is a digital certificate verification platform that transforms certificates from simple documents into verifiable digital identities.
 
-Core landing flow:
-1. Verify What’s Real
-2. Issue → Hash → Anchor → Verify
-3. The certificate problem
-4. CertiChain verification flow
-5. Interactive tamper-detection demo
-6. Built for institutions, students and verifiers
-7. Verification CTA
-8. Final trust statement
+It enables institutions to issue certificates, students to securely share them, and recruiters or organizations to verify their authenticity using a Certificate ID or QR code.
 
-The frontend is intentionally presentation-first so backend verification APIs can be connected next.
+---
 
+## Problem
 
-## Illustration language
-The illustration system now follows the supplied Pana / Cuate / Rafiki-style references:
-- Flat 2D editorial vector scenes
-- Warm yellow as the primary accent
-- Charcoal / blue-gray outlines and clothing
-- Coral and peach skin tones
-- White and light-gray interface surfaces
-- Rounded browser, phone, certificate and document shapes
-- Friendly simplified human characters
-- Small floating communication / location / document motifs
-- Subtle Framer Motion floating and entrance movement
+Digital certificates can be easily copied, edited, or misrepresented.
 
-The same visual language is intended for future Verify, Issuer and certificate-detail screens so the product feels like one consistent system.
+Traditional verification often requires:
 
+- Manual communication with institutions
+- Time-consuming verification processes
+- Checking documents individually
+- Difficulty identifying modified certificate details
+- No simple way to handle revoked credentials
 
-## Completed product flow
+CertiChain addresses these challenges through cryptographic verification and a streamlined verification workflow.
 
-### Public verification
-- Certificate ID verification
-- QR verification interface
-- Animated verification states
-- VALID / TAMPERED / REVOKED results
-- SHA-256 original vs current fingerprint comparison
-- Certificate preview modal
-- Share proof link
-- Tamper simulation and revocation simulation
+---
 
-### Issuer portal
-- Issuer dashboard with issuance and verification statistics
-- Recent certificate list
-- Issue certificate form with live preview
-- Generated certificate identity and SHA-256 fingerprint
-- Print-to-PDF certificate download flow
-- Native share / clipboard fallback
-- Revocation confirmation modal
-- Verification handoff without a page reload
+## Our Solution
 
-### API
-A small Express API is included in `server/index.mjs` for the hackathon demo.
+CertiChain creates a unique digital identity for every certificate.
 
-Run the frontend:
-```bash
-npm install
-npm run dev
-```
+Each certificate is associated with:
 
-Run the API in a second terminal:
-```bash
-npm run server
-```
+- A unique Certificate ID
+- A SHA-256 cryptographic fingerprint
+- QR-based verification
+- Verification status
+- Certificate history
+- Revocation information
+- Blockchain-backed proof layer
 
-API endpoints:
-- `GET /api/health`
-- `GET /api/dashboard/stats`
-- `GET /api/certificates`
-- `GET /api/certificates/:id`
-- `POST /api/certificates`
-- `GET /api/verify/:id`
-- `PATCH /api/certificates/:id/revoke`
-- `GET /api/certificates/:id/qr`
+The core workflow is:
 
-The API currently uses an in-memory demo store so the complete issue → fingerprint → verify → revoke story can be demonstrated quickly. Replace the store with PostgreSQL/Supabase and the blockchain anchor with a testnet contract when moving beyond the prototype.
+**ISSUE → HASH → ANCHOR → SHARE → VERIFY → DETECT → REVOKE**
 
+---
 
-## Certificate verification model
+## Key Features
 
-Every issued certificate gets a unique ID such as `CC-2026-XXXXXX`. Its QR code contains only the verification URL:
+### Digital Certificate Identity
+Every certificate receives a unique identity and cryptographic fingerprint.
 
-```
-/verify/<certificate-id>
-```
+### SHA-256 Fingerprinting
+Certificate information is converted into a SHA-256 hash to create a tamper-evident digital fingerprint.
 
-The frontend demo persists the latest issued certificate locally so the generated QR remains verifiable after navigation or refresh. Verification resolves the ID to the stored certificate record and returns:
-- **VALID** — record exists and is active
-- **TAMPERED** — the demo integrity check detects a changed proof
-- **REVOKED** — the record exists but its status has been withdrawn
-- **INVALID / NOT FOUND** — no record exists for the supplied ID
+### QR-Based Verification
+A verifier can scan the QR code or enter the Certificate ID to quickly verify a credential.
 
-For production, replace local demo persistence with PostgreSQL/Supabase and replace the demo blockchain flag with a real signed credential or blockchain transaction.
+### Tamper Detection
+If important certificate information is modified, its fingerprint changes and the system can identify a mismatch.
 
+### Blockchain Proof
+The certificate fingerprint can be anchored to blockchain as an immutable proof reference.
 
-## Phase 2 — Certificate integrity prototype
+### Certificate Revocation
+Institutions can revoke certificates when necessary while preserving their verification history.
 
-The Phase 2 verification lifecycle is implemented in the frontend demo:
+### Role-Based Workflows
+CertiChain provides dedicated workflows for:
 
-**Issue → Unique ID → SHA-256 fingerprint → Unique QR URL → Verify → Compare proof → VALID / TAMPERED / REVOKED / INVALID**
+- Institutions / Issuers
+- Students / Certificate Holders
+- Recruiters / Verifiers
 
-- Every newly issued certificate receives a unique `CC-YYYY-XXXXXX` identifier.
-- The QR code contains the certificate verification URL, not the full certificate data.
-- Issued certificates are retained in browser storage so multiple generated certificates can be verified by their own IDs.
-- SHA-256 is generated from the certificate identity and core credential fields.
-- The verification result resolves the certificate record before reporting a status.
-- Tamper simulation recalculates a changed credential fingerprint and displays the original/current mismatch.
-- Revocation stores a reason and revocation date while keeping the certificate record available for verification.
-- The issuer proof panel, certificate preview, share link and QR all use the same generated certificate ID and fingerprint.
-- The issuer's **Verify Certificate** action opens the exact generated certificate verification URL.
+### Verification History
+Certificate actions and verification events can be recorded to provide traceability.
 
-> This is still a frontend/demo proof layer. Browser storage is intentionally used until Phase 3 backend/database integration. The displayed blockchain anchor is a prototype state, not a live blockchain transaction.
+---
+
+## How It Works
+
+### 1. Issue
+
+An institution enters certificate details such as:
+
+- Student name
+- Course
+- Grade
+- Certificate type
+- Issue date
+
+### 2. Generate Proof
+
+CertiChain generates a unique Certificate ID and SHA-256 fingerprint.
+
+### 3. Anchor
+
+The certificate proof can be associated with a blockchain transaction for an immutable reference.
+
+### 4. Share
+
+The certificate is provided with a QR code that can be shared with another person.
+
+### 5. Verify
+
+The verifier enters the Certificate ID or scans the QR code.
+
+### 6. Compare
+
+The system compares the certificate information and cryptographic proof with the trusted record.
+
+### 7. Detect
+
+A mismatch indicates that the certificate may have been modified.
+
+### 8. Revoke
+
+If an institution withdraws a certificate, its status can be changed to **REVOKED** without deleting its history.
+
+---
+
+## Security Approach
+
+CertiChain follows the principles of the **CIA Triad**:
+
+| Principle | Implementation |
+|---|---|
+| Confidentiality | Controlled access to certificate information |
+| Integrity | SHA-256 fingerprinting and tamper detection |
+| Availability | Online certificate verification |
+
+The system focuses strongly on **integrity**, ensuring that changes to important certificate information can be detected.
+
+---
+
+## Technology Stack
+
+### Frontend
+- React
+- TypeScript
+- Vite
+- Framer Motion
+- Lucide React
+
+### Backend
+- Node.js
+- Express.js
+
+### Database
+- Supabase
+- PostgreSQL
+
+### Security & Verification
+- SHA-256
+- QR Code technology
+- Blockchain proof layer
+
+### Development & Deployment
+- GitHub
+- Netlify
+
+---
+
+## System Architecture
+
+```text
+                 ┌─────────────────────┐
+                 │      Institution    │
+                 │       / Issuer      │
+                 └──────────┬──────────┘
+                            │
+                            ▼
+                 ┌─────────────────────┐
+                 │     CertiChain      │
+                 │      Backend        │
+                 └──────────┬──────────┘
+                            │
+             ┌──────────────┼──────────────┐
+             ▼              ▼              ▼
+        SHA-256         Database       Blockchain
+        Fingerprint     PostgreSQL       Proof
+             │              │              │
+             └──────────────┼──────────────┘
+                            │
+                            ▼
+                     ┌─────────────┐
+                     │ Certificate │
+                     │     + QR    │
+                     └──────┬──────┘
+                            │
+                            ▼
+                     ┌─────────────┐
+                     │  Verifier   │
+                     │ ID / QR Scan│
+                     └──────┬──────┘
+                            │
+                            ▼
+                 ┌─────────────────────┐
+                 │   Verification     │
+                 │ VALID / TAMPERED /  │
+                 │      REVOKED        │
+                 └─────────────────────┘
