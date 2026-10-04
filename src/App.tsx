@@ -3,6 +3,7 @@ import { ArrowUpRight, Check, Download, Menu, QrCode, RotateCcw, Share2, ShieldC
 import QRCode from "qrcode";
 import { useEffect, useState } from "react";
 import { CertificateIllustration } from "./components/CertificateIllustration";
+import { HolderPortal, VerifierPortal } from "./components/PortalPages";
 
 const steps = [
   ["01", "ISSUE", "An institution creates a digital certificate with a unique identity."],
@@ -511,6 +512,8 @@ export default function App() {
     const queryId = new URLSearchParams(window.location.search).get("certificate") || "";
     return <VerifyPage initialCertificateId={pathId || queryId || undefined} onBack={() => { window.history.pushState({}, "", "/"); setRoute("/"); }} />;
   }
+  if (route === "/holder") return <HolderPortal onBack={() => { window.history.pushState({}, "", "/"); setRoute("/"); }} />;
+  if (route === "/verifier") return <VerifierPortal onBack={() => { window.history.pushState({}, "", "/"); setRoute("/"); }} />;
   if (route === "/issuer") return <IssuerPage onBack={() => { window.history.pushState({}, "", "/"); setRoute("/"); }} />;
   const heroY = useTransform(scrollYProgress, [0, 0.18], [0, -80]);
   const footer = footerModes[footerMode];
