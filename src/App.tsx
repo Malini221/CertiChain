@@ -17,7 +17,7 @@ const footerModes = {
   revoke: { label: "REVOKE", title: "STOP TRUST WHEN NEEDED.", text: "If a credential should no longer be accepted, its verification state can be marked revoked.", action: "View revocation" },
 };
 
-type VerificationState = "idle" | "scanning" | "checking" | "valid" | "tampered" | "revoked";
+type VerificationState = "idle" | "scanning" | "checking" | "valid" | "tampered" | "revoked" | "invalid";
 
 const demoCertificate = {
   id: "CC-2026-0842",
@@ -94,6 +94,21 @@ async function shareCertificate(certificate: typeof generatedCertificate) {
   return "copied";
 }
 
+function saveIssuedCertificate(certificate: typeof generatedCertificate) {
+  localStorage.setItem("certichain:latest-certificate", JSON.stringify(certificate));
+}
+function loadCertificate(id: string) {
+  if (id === demoCertificate.id) return demoCertificate;
+  try {
+    const raw = localStorage.getItem("certichain:latest-certificate");
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed.id === id) return parsed;
+    }
+  } catch {}
+  return null;
+}
+
 function persistRevocation(id: string) {
   localStorage.setItem(`certichain:revoked:${id}`, "1");
 }
@@ -132,7 +147,9 @@ function IssuerPage({ onBack }: { onBack: () => void }) {
     if (!student.trim()) return;
     const id = `CC-${new Date().getFullYear()}-${crypto.randomUUID().slice(0, 6).toUpperCase()}`;
     const fingerprint = await sha256Fingerprint(JSON.stringify({ id, student, course, grade, issuer: "ABC Institute of Technology", issued }));
-    setIssuedCertificate({ id, student, course, grade, issuer: "ABC Institute of Technology", issued, hash: fingerprint });
+    const certificate = { id, student, course, grade, issuer: "ABC Institute of Technology", issued, hash: fingerprint };
+    setIssuedCertificate(certificate);
+    saveIssuedCertificate(certificate);
     setStep("ready");
     setCreated(true);
   };
@@ -210,18 +227,27 @@ function VerifyPage({ onBack, initialCertificateId }: { onBack: () => void; init
   const [demoTampered, setDemoTampered] = useState(false);
   const [showCertificate, setShowCertificate] = useState(false);
   const [shared, setShared] = useState(false);
-  const [revoked, setRevoked] = useState(() => isPersistedRevoked(demoCertificate.id));
+  const [record, setRecord] = useState(() => loadCertificate(initialCertificateId || demoCertificate.id));
+  const [revoked, setRevoked] = useState(() => isPersistedRevoked(initialCertificateId || demoCertificate.id));
 
   const verify = () => {
+    const found = loadCertificate(certificateId);
+    setRecord(found);
     setStatus("scanning");
     window.setTimeout(() => setStatus("checking"), 700);
-    window.setTimeout(() => setStatus(revoked || isPersistedRevoked(demoCertificate.id) ? "revoked" : demoTampered ? "tampered" : "valid"), 1700);
+    window.setTimeout(() => {
+      if (!found) return setStatus("invalid");
+      const isRevoked = isPersistedRevoked(found.id);
+      setRevoked(isRevoked);
+      setStatus(isRevoked ? "revoked" : demoTampered && found.id === demoCertificate.id ? "tampered" : "valid");
+    }, 1700);
   };
 
   const reset = () => {
     setStatus("idle");
     setDemoTampered(false);
     setCertificateId(demoCertificate.id);
+    setRecord(loadCertificate(demoCertificate.id));
   };
 
   const simulateTamper = () => {
@@ -296,6 +322,14 @@ function VerifyPage({ onBack, initialCertificateId }: { onBack: () => void; init
         </motion.div>
       </section>
 
+      {status === "invalid" && (
+        <motion.section className="verification-result tampered-result" initial={{opacity:0,y:35}} animate={{opacity:1,y:0}}>
+          <div className="result-topline"><span>00 / NOT FOUND</span><span className="status-pill bad"><X size={15}/> INVALID</span></div>
+          <div className="result-grid"><div><div className="big-status"><span className="status-icon bad-icon"><X size={34}/></span><div><p>VERIFICATION FAILED</p><h2>CERTIFICATE<br/><em>NOT FOUND.</em></h2></div></div><p className="result-copy">No certificate with ID <b>{certificateId}</b> exists in the CertiChain verification record.</p></div><div className="tamper-visual"><CertificateIllustration variant="tamper"/></div></div>
+          <div className="demo-controls"><span>CHECK ANOTHER</span><button onClick={reset}>VERIFY ANOTHER</button></div>
+        </motion.section>
+      )}
+
       {status === "valid" && (
         <motion.section className="verification-result valid-result" initial={{opacity:0,y:35}} animate={{opacity:1,y:0}}>
           <div className="result-topline"><span>01 / VERIFIED</span><span className="status-pill valid"><Check size={15}/> ACTIVE</span></div>
@@ -305,7 +339,7 @@ function VerifyPage({ onBack, initialCertificateId }: { onBack: () => void; init
               <p className="result-copy">The submitted certificate matches the original cryptographic fingerprint anchored by the issuer.</p>
               <div className="result-actions"><button onClick={()=>setShowCertificate(true)}>VIEW CERTIFICATE <ArrowUpRight size={17}/></button><button onClick={async()=>{try{const result=await shareCertificate(generatedCertificate);setShared(true);window.setTimeout(()=>setShared(false),1800)}catch{setShared(false)}}}><Share2 size={17}/> SHARE</button>{shared && <motion.span className="share-toast" initial={{opacity:0,y:8}} animate={{opacity:1,y:0}}>LINK COPIED ✓</motion.span>}</div>
             </div>
-            <CertificateProofCard certificate={demoCertificate} />
+            <CertificateProofCard certificate={record || demoCertificate} />
           </div>
           <div className="demo-controls"><span>DEMO CONTROLS</span><button onClick={simulateTamper}>SIMULATE TAMPERING <ArrowUpRight size={16}/></button><button onClick={simulateRevoke}>SIMULATE REVOCATION <ArrowUpRight size={16}/></button><button onClick={reset}>VERIFY ANOTHER</button></div>
         </motion.section>
@@ -335,7 +369,7 @@ function VerifyPage({ onBack, initialCertificateId }: { onBack: () => void; init
               <p className="result-copy">The certificate is authentic, but the issuing institution has withdrawn its validity.</p>
               <div className="revocation-box"><strong>Revoked on 18 September 2026</strong><span>Reason: Certificate withdrawn by issuing institution.</span></div>
             </div>
-            <CertificateProofCard certificate={demoCertificate} revoked/>
+            <CertificateProofCard certificate={record || demoCertificate} revoked/>
           </div>
           <div className="demo-controls"><span>DEMO CONTROLS</span><button onClick={reset}>VERIFY ANOTHER</button></div>
         </motion.section>
