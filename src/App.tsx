@@ -483,6 +483,8 @@ function VerifyPage({ onBack, initialCertificateId }: { onBack: () => void; init
 
 
 function CertificatePreview({ onClose, certificate = demoCertificate }: { onClose: () => void; certificate?: typeof demoCertificate }) {
+  const [shared, setShared] = useState(false);
+
   return (
     <motion.div className="certificate-modal-backdrop" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} onClick={onClose}>
       <motion.div className="certificate-modal" initial={{opacity:0,y:28,scale:.97}} animate={{opacity:1,y:0,scale:1}} transition={{duration:.35,ease:[.25,.1,.25,1]}} onClick={(e)=>e.stopPropagation()}>
