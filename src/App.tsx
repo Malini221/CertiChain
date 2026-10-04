@@ -2,6 +2,8 @@ import { motion, useScroll, useTransform } from "framer-motion";
 import { ArrowUpRight, Check, Download, Menu, QrCode, RotateCcw, Share2, ShieldCheck, X } from "lucide-react";
 import QRCode from "qrcode";
 import { useEffect, useState } from "react";
+
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
 import { CertificateIllustration } from "./components/CertificateIllustration";
 import { HolderPortal, VerifierPortal } from "./components/PortalPages";
 
@@ -311,49 +313,102 @@ function VerifyPage({ onBack, initialCertificateId }: { onBack: () => void; init
   const [revoked, setRevoked] = useState(() => isPersistedRevoked(initialCertificateId || demoCertificate.id));
   const revocation = record ? getRevocation(record.id) : null;
 
-  const verify = () => {
-    const found = loadCertificate(certificateId);
-    setRecord(found);
-    setCurrentFingerprint(found?.hash || "");
+  const verify = async () => {
+    const id = certificateId.trim().toUpperCase();
+    if (!id) return;
+
     setStatus("scanning");
+    setRecord(null);
+    setCurrentFingerprint("");
+    setRevoked(false);
+
     window.setTimeout(() => setStatus("checking"), 700);
-    window.setTimeout(() => {
-      if (!found) return setStatus("invalid");
-      const isRevoked = isPersistedRevoked(found.id);
-      setRevoked(isRevoked);
-      setStatus(isRevoked ? "revoked" : demoTampered ? "tampered" : "valid");
-    }, 1700);
+
+    try {
+      const response = await fetch(`${API_BASE}/api/verify/${encodeURIComponent(id)}`);
+      const data = await response.json();
+
+      window.setTimeout(() => {
+        if (!response.ok || data.status === "NOT_FOUND") {
+          setRecord(null);
+          setStatus("invalid");
+          return;
+        }
+
+        const apiCertificate = data.certificate;
+        setRecord({
+          id: apiCertificate.id,
+          student: apiCertificate.student,
+          course: apiCertificate.course,
+          grade: apiCertificate.grade,
+          issuer: apiCertificate.issuer,
+          issued: apiCertificate.issued,
+          hash: apiCertificate.hash,
+        });
+        setCurrentFingerprint(data.currentHash || apiCertificate.hash || "");
+        setRevoked(data.status === "REVOKED");
+
+        if (data.status === "REVOKED") setStatus("revoked");
+        else if (data.status === "TAMPERED") setStatus("tampered");
+        else setStatus("valid");
+      }, 900);
+    } catch {
+      window.setTimeout(() => setStatus("invalid"), 900);
+    }
   };
+
+  useEffect(() => {
+    if (!initialCertificateId) return;
+    const timer = window.setTimeout(() => { void verify(); }, 120);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   const reset = () => {
     setStatus("idle");
     setDemoTampered(false);
-    setCurrentFingerprint(record?.hash || demoCertificate.hash);
-    setCertificateId(demoCertificate.id);
-    setRecord(loadCertificate(demoCertificate.id));
+    setCurrentFingerprint("");
+    setCertificateId(initialCertificateId || demoCertificate.id);
+    setRecord(null);
+    setRevoked(false);
   };
 
   const simulateTamper = async () => {
     setDemoTampered(true);
     const found = record || demoCertificate;
     const tamperedCertificate = { ...found, grade: found.grade === "A+" ? "A++" : `${found.grade}*` };
-    const tamperedHash = found.id === demoCertificate.id
-      ? "4b12a7c4...91aa"
-      : await certificateFingerprint(tamperedCertificate);
+    const tamperedHash = await certificateFingerprint(tamperedCertificate);
     setCurrentFingerprint(tamperedHash);
     setStatus("checking");
     window.setTimeout(() => setStatus("tampered"), 900);
   };
 
-  const simulateRevoke = () => {
+  const simulateRevoke = async () => {
+    const id = (record || demoCertificate).id;
     setDemoTampered(false);
-    persistRevocation(demoCertificate.id, "Certificate withdrawn by issuing institution.");
-    setRevoked(true);
     setStatus("checking");
-    window.setTimeout(() => setStatus("revoked"), 900);
+
+    try {
+      const response = await fetch(`${API_BASE}/api/certificates/${encodeURIComponent(id)}/revoke`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: "Certificate withdrawn by issuing institution." }),
+      });
+
+      if (!response.ok) throw new Error("Revocation failed");
+      setRevoked(true);
+      window.setTimeout(() => { void verify(); }, 900);
+    } catch {
+      setStatus("invalid");
+    }
   };
 
   const busy = status === "scanning" || status === "checking";
+
+  useEffect(() => {
+    if (status === "valid" || status === "revoked" || status === "tampered") {
+      setDemoTampered(false);
+    }
+  }, [status]);
 
   return (
     <main className="verify-page">
