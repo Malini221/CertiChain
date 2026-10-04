@@ -568,8 +568,8 @@ export default function App() {
         <div className="section-kicker">WHO IT SERVES / 05</div>
         <div className="audience-grid">
           <article><span>01</span><h3>Institutions</h3><p>Issue trusted certificates, keep a clean verification trail and revoke when necessary.</p><button className="inline-link route-button" onClick={() => { window.history.pushState({}, "", "/issuer"); setRoute("/issuer"); }}>Issuer portal <ArrowUpRight size={17}/></button></article>
-          <article><span>02</span><h3>Students</h3><p>Carry one certificate proof that can be shared without asking someone to manually confirm it.</p><button className="inline-link route-button" onClick={() => { window.history.pushState({}, "", "/verify"); setRoute("/verify"); }}>My certificate <ArrowUpRight size={17}/></button></article>
-          <article><span>03</span><h3>Verifiers</h3><p>Scan a QR or enter an ID and know whether the document is original, tampered or revoked.</p><button className="inline-link route-button" onClick={() => { window.history.pushState({}, "", "/verify"); setRoute("/verify"); }}>Verify now <ArrowUpRight size={17}/></button></article>
+          <article><span>02</span><h3>Students</h3><p>Carry one certificate proof that can be shared without asking someone to manually confirm it.</p><button className="inline-link route-button" onClick={() => { window.history.pushState({}, "", "/holder"); setRoute("/holder"); }}>My certificate <ArrowUpRight size={17}/></button></article>
+          <article><span>03</span><h3>Verifiers</h3><p>Scan a QR or enter an ID and know whether the document is original, tampered or revoked.</p><button className="inline-link route-button" onClick={() => { window.history.pushState({}, "", "/verifier"); setRoute("/verifier"); }}>Verify now <ArrowUpRight size={17}/></button></article>
         </div>
       </section>
 
