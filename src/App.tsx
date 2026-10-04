@@ -68,6 +68,11 @@ async function certificateFingerprint(certificate: {
   }));
 }
 
+function navigateTo(path: string) {
+  window.history.pushState({}, "", path);
+  window.dispatchEvent(new PopStateEvent("popstate"));
+}
+
 function verificationUrl(id: string) {
   return `${window.location.origin}/verify/${encodeURIComponent(id)}`;
 }
@@ -290,7 +295,7 @@ function IssuerPage({ onBack }: { onBack: () => void }) {
             <div className="issuer-panel generated-sheet"><div className="generated-top"><span>CERTICHAIN</span><span>VERIFIED CREDENTIAL</span></div><div className="generated-body"><div className="mini-seal"><Check size={24}/></div><small>{type.toUpperCase()}</small><h2>{issuedCertificate.student}</h2><p>has successfully completed</p><strong>{issuedCertificate.course}</strong><div className="generated-grade"><span>FINAL GRADE</span><b>{issuedCertificate.grade}</b></div><div className="generated-meta"><span>ISSUED BY <b>{issuedCertificate.issuer}</b></span><span>DATE <b>{issuedCertificate.issued}</b></span><span>ID <b>{issuedCertificate.id}</b></span></div></div><div className="generated-bottom"><div><span>SHA-256 FINGERPRINT</span><code>{issuedCertificate.hash}</code></div><CertificateQR id={issuedCertificate.id} size={62}/></div></div>
             <div className="ready-details"><div className="issuer-panel proof-status"><span>ISSUANCE PROOF</span><h2>Ready to trust.</h2>{[["CERTIFICATE ID", issuedCertificate.id],["SHA-256", issuedCertificate.hash],["BLOCKCHAIN","ANCHORED ✓"],["QR VERIFICATION","GENERATED ✓"]].map(x=><div key={x[0]}><span>{x[0]}</span><b>{x[1]}</b></div>)}</div><div className="ready-actions"><button onClick={()=>{const ok=certificatePrintWindow(issuedCertificate); if(ok){setToast("Print dialog opened — choose Save as PDF."); setTimeout(()=>setToast(""),2600)}}}><Download size={16}/> DOWNLOAD / PDF</button>
               <button onClick={async()=>{try{const result=await shareCertificate(issuedCertificate);setToast(result==="shared"?"Share sheet opened.":"Verification link copied.");setTimeout(()=>setToast(""),2200)}catch{setToast("Sharing cancelled.");setTimeout(()=>setToast(""),1800)}}}><Share2 size={16}/> SHARE PROOF</button>
-              <button className="dark" onClick={()=>{window.history.pushState({}, "", verificationUrl(issuedCertificate.id)); window.dispatchEvent(new PopStateEvent("popstate"))}}>VERIFY CERTIFICATE <ArrowUpRight size={16}/></button>
+              <button className="dark" onClick={()=>{navigateTo(verificationUrl(issuedCertificate.id))}}>VERIFY CERTIFICATE <ArrowUpRight size={16}/></button>
               <button onClick={()=>setShowRevoke(true)}><RotateCcw size={16}/> REVOKE CERTIFICATE</button>
               <button onClick={()=>setStep("dashboard")}>BACK TO DASHBOARD</button>
               {toast && <motion.div className="issuer-toast" initial={{opacity:0,y:8}} animate={{opacity:1,y:0}}>{toast}</motion.div>}
@@ -595,11 +600,11 @@ export default function App() {
   if (route === "/verify" || route.startsWith("/verify/")) {
     const pathId = route.startsWith("/verify/") ? decodeURIComponent(route.slice("/verify/".length)) : "";
     const queryId = new URLSearchParams(window.location.search).get("certificate") || "";
-    return <VerifyPage initialCertificateId={pathId || queryId || undefined} onBack={() => { window.history.pushState({}, "", "/"); setRoute("/"); }} />;
+    return <VerifyPage initialCertificateId={pathId || queryId || undefined} onBack={() => { navigateTo("/"); }} />;
   }
-  if (route === "/holder") return <HolderPortal onBack={() => { window.history.pushState({}, "", "/"); setRoute("/"); }} />;
-  if (route === "/verifier") return <VerifierPortal onBack={() => { window.history.pushState({}, "", "/"); setRoute("/"); }} />;
-  if (route === "/issuer") return <IssuerPage onBack={() => { window.history.pushState({}, "", "/"); setRoute("/"); }} />;
+  if (route === "/holder") return <HolderPortal onBack={() => { navigateTo("/"); }} />;
+  if (route === "/verifier") return <VerifierPortal onBack={() => { navigateTo("/"); }} />;
+  if (route === "/issuer") return <IssuerPage onBack={() => { navigateTo("/"); }} />;
   const heroY = useTransform(scrollYProgress, [0, 0.18], [0, -80]);
   const footer = footerModes[footerMode];
 
@@ -609,7 +614,7 @@ export default function App() {
         <a href="#" className="brand"><span className="brand-mark">C</span><span>CertiChain</span></a>
         <div className={`nav-links ${menuOpen ? "open" : ""}`}>
           <a href="#how">How it works</a><a href="#tamper">Tamper check</a><a href="#for">Built for</a>
-          <button className="nav-verify nav-route-button" onClick={() => { window.history.pushState({}, "", "/verify"); setRoute("/verify"); }}>Verify certificate <ArrowUpRight size={17}/></button>
+          <button className="nav-verify nav-route-button" onClick={() => { navigateTo("/verify"); }}>Verify certificate <ArrowUpRight size={17}/></button>
         </div>
         <button className="menu-btn" onClick={() => setMenuOpen(!menuOpen)} aria-label="Toggle menu">{menuOpen ? <X/> : <Menu/>}</button>
       </nav>
@@ -619,7 +624,7 @@ export default function App() {
           <p className="eyebrow"><span/> Digital certificate verification</p>
           <h1>VERIFY<br/><em>WHAT’S REAL.</em></h1>
           <p className="hero-lede">Certificates should prove achievement — not create doubt. CertiChain makes authenticity visible in seconds.</p>
-          <div className="hero-actions"><button className="button button-dark route-button" onClick={() => { window.history.pushState({}, "", "/verify"); setRoute("/verify"); }}>VERIFY CERTIFICATE <ArrowUpRight size={18}/></button><button className="button button-light route-button" onClick={() => { window.history.pushState({}, "", "/issuer"); setRoute("/issuer"); }}>ISSUE CERTIFICATE</button></div>
+          <div className="hero-actions"><button className="button button-dark route-button" onClick={() => { navigateTo("/verify"); }}>VERIFY CERTIFICATE <ArrowUpRight size={18}/></button><button className="button button-light route-button" onClick={() => { navigateTo("/issuer"); }}>ISSUE CERTIFICATE</button></div>
           <div className="hero-proof"><ShieldCheck size={19}/><span>Cryptographic fingerprint + blockchain anchor</span></div>
         </motion.div>
         <motion.div className="hero-art exact-cuate" initial={{opacity:0,scale:.94,y:20}} animate={{opacity:1,scale:1,y:0}} transition={{duration:.8,ease:"easeOut"}}><img src="https://stories.freepiklabs.com/storage/48735/Certification_Mesa-de-trabajo-1.svg" alt="Certification illustration" /></motion.div>
@@ -652,13 +657,13 @@ export default function App() {
       <section className="audience section-pad" id="for">
         <div className="section-kicker">WHO IT SERVES / 05</div>
         <div className="audience-grid">
-          <article><span>01</span><h3>Institutions</h3><p>Issue trusted certificates, keep a clean verification trail and revoke when necessary.</p><button className="inline-link route-button" onClick={() => { window.history.pushState({}, "", "/issuer"); setRoute("/issuer"); }}>Issuer portal <ArrowUpRight size={17}/></button></article>
-          <article><span>02</span><h3>Students</h3><p>Carry one certificate proof that can be shared without asking someone to manually confirm it.</p><button className="inline-link route-button" onClick={() => { window.history.pushState({}, "", "/holder"); setRoute("/holder"); }}>My certificate <ArrowUpRight size={17}/></button></article>
-          <article><span>03</span><h3>Verifiers</h3><p>Scan a QR or enter an ID and know whether the document is original, tampered or revoked.</p><button className="inline-link route-button" onClick={() => { window.history.pushState({}, "", "/verifier"); setRoute("/verifier"); }}>Verify now <ArrowUpRight size={17}/></button></article>
+          <article><span>01</span><h3>Institutions</h3><p>Issue trusted certificates, keep a clean verification trail and revoke when necessary.</p><button className="inline-link route-button" onClick={() => { navigateTo("/issuer"); }}>Issuer portal <ArrowUpRight size={17}/></button></article>
+          <article><span>02</span><h3>Students</h3><p>Carry one certificate proof that can be shared without asking someone to manually confirm it.</p><button className="inline-link route-button" onClick={() => { navigateTo("/holder"); }}>My certificate <ArrowUpRight size={17}/></button></article>
+          <article><span>03</span><h3>Verifiers</h3><p>Scan a QR or enter an ID and know whether the document is original, tampered or revoked.</p><button className="inline-link route-button" onClick={() => { navigateTo("/verifier"); }}>Verify now <ArrowUpRight size={17}/></button></article>
         </div>
       </section>
 
-      <section className="cta section-pad" id="verify"><div className="cta-art"><CertificateIllustration variant="verifier"/></div><div><div className="section-kicker">FINAL CHECK / 06</div><h2>TRUST IT.<br/><span>OR DON’T.</span></h2><p>Enter a certificate ID or scan its QR code. CertiChain checks the document against its original cryptographic proof.</p><button className="button button-dark route-button" onClick={() => { window.history.pushState({}, "", "/verify"); setRoute("/verify"); }}>START VERIFICATION <ArrowUpRight size={18}/></button></div></section>
+      <section className="cta section-pad" id="verify"><div className="cta-art"><CertificateIllustration variant="verifier"/></div><div><div className="section-kicker">FINAL CHECK / 06</div><h2>TRUST IT.<br/><span>OR DON’T.</span></h2><p>Enter a certificate ID or scan its QR code. CertiChain checks the document against its original cryptographic proof.</p><button className="button button-dark route-button" onClick={() => { navigateTo("/verify"); }}>START VERIFICATION <ArrowUpRight size={18}/></button></div></section>
 
       <footer className="footer-cta section-pad" id="issue">
         <div className="footer-top"><span>CertiChain</span><span>Verify once. Trust instantly.</span></div>
@@ -673,7 +678,7 @@ export default function App() {
               <div className="footer-panel-copy">
                 <p className="footer-panel-kicker">CERTICHAIN / {footer.label}</p>
                 <h3>{footer.title}</h3><p>{footer.text}</p>
-                <button className="footer-action route-button" onClick={() => { window.history.pushState({}, "", footerMode==="issue" ? "/issuer" : "/verify"); setRoute(footerMode==="issue" ? "/issuer" : "/verify"); }}>{footer.action} <ArrowUpRight size={17}/></button>
+                <button className="footer-action route-button" onClick={() => { navigateTo(footerMode==="issue" ? "/issuer" : "/verify"); }}>{footer.action} <ArrowUpRight size={17}/></button>
               </div>
             </motion.div>
           </div>
