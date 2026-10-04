@@ -1,16 +1,43 @@
 import { motion } from "framer-motion";
 import { ArrowLeft, ArrowUpRight, Check, Download, QrCode, Search, ShieldCheck, Share2, UserRound, X } from "lucide-react";
-import { useMemo, useState } from "react";
+import QRCode from "qrcode";
+import { useEffect, useMemo, useState } from "react";
 
 type Certificate = {
   id:string; name:string; course:string; issuer:string; date:string; grade:string; status:"ACTIVE"|"REVOKED";
 };
 
-const certs: Certificate[] = [
+const demoCerts: Certificate[] = [
   { id:"CC-2026-0842", name:"Arun Kumar", course:"B.E. Computer Science", issuer:"ABC Institute of Technology", date:"12 Mar 2026", grade:"A+", status:"ACTIVE" },
   { id:"CC-2026-0839", name:"Arun Kumar", course:"B.Sc. Information Technology", issuer:"ABC Institute of Technology", date:"08 Mar 2026", grade:"A", status:"ACTIVE" },
   { id:"CC-2026-0827", name:"Arun Kumar", course:"B.E. Cyber Security", issuer:"ABC Institute of Technology", date:"02 Mar 2026", grade:"A+", status:"ACTIVE" },
 ];
+
+function isRevoked(id:string){
+  try { return Boolean(localStorage.getItem(`certichain:revoked:${id}`)); } catch { return false; }
+}
+function readCertificates(): Certificate[] {
+  try {
+    const raw=localStorage.getItem("certichain:certificates");
+    const stored=raw?JSON.parse(raw):[];
+    const list=Array.isArray(stored)?stored:[];
+    const merged=[...demoCerts,...list];
+    return merged.filter((c,i,a)=>c?.id && a.findIndex(x=>x.id===c.id)===i).map(c=>({
+      id:c.id, name:c.student||c.name, course:c.course, issuer:c.issuer,
+      date:c.issued||c.date, grade:c.grade, status:isRevoked(c.id)?"REVOKED":"ACTIVE"
+    }));
+  } catch { return demoCerts; }
+}
+
+function CertificateQR({id,size=180}:{id:string;size?:number}){
+  const [src,setSrc]=useState("");
+  useEffect(()=>{
+    let active=true;
+    QRCode.toDataURL(certificateUrl(id),{width:size,margin:1}).then(url=>{if(active)setSrc(url)}).catch(()=>setSrc(""));
+    return()=>{active=false};
+  },[id,size]);
+  return src?<img src={src} width={size} height={size} alt={`QR verification code for ${id}`}/>:<QrCode size={Math.min(size,110)}/>;
+}
 
 function go(path:string){ window.history.pushState({}, "", path); window.dispatchEvent(new PopStateEvent("popstate")); }
 
@@ -33,13 +60,15 @@ function printCertificate(certificate:Certificate){
 }
 
 export function HolderPortal({ onBack }:{onBack:()=>void}) {
-  const [selected,setSelected]=useState<Certificate>(certs[0]);
+  const [certificates,setCertificates]=useState<Certificate[]>(demoCerts);
+  const [selected,setSelected]=useState<Certificate>(demoCerts[0]);
   const [copied,setCopied]=useState(false);
   const [activeTab,setActiveTab]=useState("Overview");
   const [showQr,setShowQr]=useState(false);
   const [query,setQuery]=useState("");
+  useEffect(()=>{ const list=readCertificates(); setCertificates(list); setSelected(list[0]||demoCerts[0]); },[]);
 
-  const filtered=useMemo(()=>certs.filter(c=>`${c.course} ${c.id}`.toLowerCase().includes(query.toLowerCase())),[query]);
+  const filtered=useMemo(()=>certificates.filter(c=>`${c.course} ${c.id}`.toLowerCase().includes(query.toLowerCase())),[query]);
 
   const share=async()=>{
     try{
@@ -64,7 +93,7 @@ export function HolderPortal({ onBack }:{onBack:()=>void}) {
       <aside className="portal-sidebar">
         <div className="portal-avatar"><UserRound size={20}/></div><strong>Arun Kumar</strong><span>Certificate holder</span>
         <nav>{["Overview","My certificates","Verification links"].map(name=><button key={name} className={activeTab===name?"selected":""} onClick={()=>tab(name)}>{name}</button>)}</nav>
-        <div className="portal-trust"><ShieldCheck size={18}/><b>Trust profile</b><span>3 active credentials</span></div>
+        <div className="portal-trust"><ShieldCheck size={18}/><b>Trust profile</b><span>{certificates.filter(c=>!isRevoked(c.id)).length} active credentials</span></div>
       </aside>
       <div className="portal-main">
         <div className="portal-heading">
@@ -72,7 +101,7 @@ export function HolderPortal({ onBack }:{onBack:()=>void}) {
           <button className="portal-dark" onClick={()=>go("/verify")}>VERIFY A CERTIFICATE <ArrowUpRight size={16}/></button>
         </div>
 
-        <div className="portal-stats"><div><span>ACTIVE</span><b>3</b><small>credentials</small></div><div><span>VERIFIED</span><b>24</b><small>public checks</small></div><div><span>TRUST</span><b>100%</b><small>current status</small></div></div>
+        <div className="portal-stats"><div><span>ACTIVE</span><b>{certificates.filter(c=>!isRevoked(c.id)).length}</b><small>credentials</small></div><div><span>VERIFIED</span><b>24</b><small>public checks</small></div><div><span>TRUST</span><b>100%</b><small>current status</small></div></div>
 
         <div className="portal-grid">
           <div className="holder-card">
@@ -104,7 +133,7 @@ export function HolderPortal({ onBack }:{onBack:()=>void}) {
       <motion.div className="portal-qr-modal" initial={{opacity:0,y:20,scale:.98}} animate={{opacity:1,y:0,scale:1}} onClick={e=>e.stopPropagation()}>
         <button className="portal-modal-close" onClick={()=>setShowQr(false)}><X size={18}/></button>
         <span>VERIFICATION LINK</span><h2>SHARE YOUR PROOF.</h2>
-        <div className="qr-placeholder"><QrCode size={110}/></div>
+        <div className="qr-placeholder"><CertificateQR id={selected.id} size={180}/></div>
         <b>{selected.id}</b><p>Use the QR on your certificate or share the verification link.</p>
         <button className="portal-dark" onClick={share}><Share2 size={15}/> SHARE LINK</button>
       </motion.div>
@@ -116,10 +145,12 @@ export function VerifierPortal({ onBack }:{onBack:()=>void}) {
   const [query,setQuery]=useState("");
   const [checked,setChecked]=useState(false);
   const [scanning,setScanning]=useState(false);
-  const result=useMemo(()=>certs.find(c=>c.id.toLowerCase()===query.trim().toLowerCase())||null,[query]);
+  const [certificates,setCertificates]=useState<Certificate[]>(demoCerts);
+  useEffect(()=>{setCertificates(readCertificates())},[]);
+  const result=useMemo(()=>certificates.find(c=>c.id.toLowerCase()===query.trim().toLowerCase())||null,[query]);
 
   const check=()=>{setScanning(false);setChecked(true);};
-  const demoScan=()=>{setScanning(true);setTimeout(()=>{setQuery("CC-2026-0842");setChecked(true);setScanning(false)},900);};
+  const demoScan=()=>{setScanning(true);setTimeout(()=>{setQuery("CC-2026-0842");setChecked(true);setScanning(false)},900)};
 
   return <main className="verifier-page">
     <header className="portal-nav dark-portal"><button className="portal-brand light-brand" onClick={onBack}><span className="brand-mark">C</span> CertiChain</button><span className="portal-label">VERIFIER WORKSPACE</span><button className="portal-back light-button" onClick={onBack}><ArrowLeft size={15}/> Public site</button></header>
