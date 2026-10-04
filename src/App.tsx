@@ -47,6 +47,24 @@ async function sha256Fingerprint(value: string) {
   return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+async function certificateFingerprint(certificate: {
+  id: string;
+  student: string;
+  course: string;
+  grade: string;
+  issuer: string;
+  issued: string;
+}) {
+  return sha256Fingerprint(JSON.stringify({
+    id: certificate.id,
+    student: certificate.student,
+    course: certificate.course,
+    grade: certificate.grade,
+    issuer: certificate.issuer,
+    issued: certificate.issued,
+  }));
+}
+
 function verificationUrl(id: string) {
   return `${window.location.origin}/verify/${encodeURIComponent(id)}`;
 }
@@ -178,7 +196,7 @@ function IssuerPage({ onBack }: { onBack: () => void }) {
   const issue = async () => {
     if (!student.trim()) return;
     const id = `CC-${new Date().getFullYear()}-${crypto.randomUUID().slice(0, 6).toUpperCase()}`;
-    const fingerprint = await sha256Fingerprint(JSON.stringify({ id, student, course, grade, issuer: "ABC Institute of Technology", issued }));
+    const fingerprint = await certificateFingerprint({ id, student, course, grade, issuer: "ABC Institute of Technology", issued });
     const certificate = { id, student, course, grade, issuer: "ABC Institute of Technology", issued, hash: fingerprint };
     setIssuedCertificate(certificate);
     saveIssuedCertificate(certificate);
@@ -259,13 +277,15 @@ function VerifyPage({ onBack, initialCertificateId }: { onBack: () => void; init
   const [demoTampered, setDemoTampered] = useState(false);
   const [showCertificate, setShowCertificate] = useState(false);
   const [shared, setShared] = useState(false);
-  const [record, setRecord] = useState(() => loadCertificate(initialCertificateId || demoCertificate.id));
+  const [currentFingerprint, setCurrentFingerprint] = useState("");
+  const [record, setRecord = useState(() => loadCertificate(initialCertificateId || demoCertificate.id));
   const [revoked, setRevoked] = useState(() => isPersistedRevoked(initialCertificateId || demoCertificate.id));
   const revocation = record ? getRevocation(record.id) : null;
 
   const verify = () => {
     const found = loadCertificate(certificateId);
     setRecord(found);
+    setCurrentFingerprint(found?.hash || "");
     setStatus("scanning");
     window.setTimeout(() => setStatus("checking"), 700);
     window.setTimeout(() => {
@@ -279,12 +299,19 @@ function VerifyPage({ onBack, initialCertificateId }: { onBack: () => void; init
   const reset = () => {
     setStatus("idle");
     setDemoTampered(false);
+    setCurrentFingerprint(record?.hash || demoCertificate.hash);
     setCertificateId(demoCertificate.id);
     setRecord(loadCertificate(demoCertificate.id));
   };
 
-  const simulateTamper = () => {
+  const simulateTamper = async () => {
     setDemoTampered(true);
+    const found = record || demoCertificate;
+    const tamperedCertificate = { ...found, grade: found.grade === "A+" ? "A++" : `${found.grade}*` };
+    const tamperedHash = found.id === demoCertificate.id
+      ? "4b12a7c4...91aa"
+      : await certificateFingerprint(tamperedCertificate);
+    setCurrentFingerprint(tamperedHash);
     setStatus("checking");
     window.setTimeout(() => setStatus("tampered"), 900);
   };
@@ -385,7 +412,7 @@ function VerifyPage({ onBack, initialCertificateId }: { onBack: () => void; init
             <div>
               <div className="big-status"><span className="status-icon bad-icon"><X size={34}/></span><div><p>INTEGRITY CHECK FAILED</p><h2>TAMPER<br/><em>DETECTED.</em></h2></div></div>
               <p className="result-copy">The current document no longer matches the fingerprint originally anchored for this certificate.</p>
-              <div className="hash-compare"><div><span>ORIGINAL FINGERPRINT</span><code>{(record || demoCertificate).hash}</code></div><div><span>CURRENT FINGERPRINT</span><code className="bad-code">{(record || demoCertificate).id === demoCertificate.id ? "4b12a7c4...91aa" : "HASH MISMATCH — DOCUMENT CHANGED"}</code></div></div>
+              <div className="hash-compare"><div><span>ORIGINAL FINGERPRINT</span><code>{(record || demoCertificate).hash}</code></div><div><span>CURRENT FINGERPRINT</span><code className="bad-code">{currentFingerprint}</code></div></div>
             </div>
             <div className="tamper-visual"><CertificateIllustration variant="tamper"/><div className="tamper-stamp"><X size={18}/> HASH MISMATCH</div></div>
           </div>
