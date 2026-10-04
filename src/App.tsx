@@ -28,6 +28,84 @@ const demoCertificate = {
   hash: "8f7a2d91...c31e",
 };
 
+type IssuerStep = "dashboard" | "issue" | "ready";
+
+function IssuerPage({ onBack }: { onBack: () => void }) {
+  const [step, setStep] = useState<IssuerStep>("dashboard");
+  const [student, setStudent] = useState("");
+  const [email, setEmail] = useState("");
+  const [course, setCourse] = useState("B.E. Computer Science");
+  const [type, setType] = useState("Certificate of Achievement");
+  const [grade, setGrade] = useState("A+");
+  const [issued, setIssued] = useState("04 October 2026");
+  const [created, setCreated] = useState(false);
+
+  const issue = () => {
+    if (!student.trim()) return;
+    setStep("ready");
+    setCreated(true);
+  };
+
+  return <main className="issuer-page">
+    <nav className="nav issuer-nav">
+      <button className="brand brand-button" onClick={onBack}><span className="brand-mark">C</span><span>CertiChain</span></button>
+      <div className="issuer-nav-center"><span>ISSUER PORTAL</span><b>ABC Institute of Technology</b></div>
+      <button className="issuer-back" onClick={onBack}>Public site <ArrowUpRight size={15}/></button>
+    </nav>
+
+    <section className="issuer-shell">
+      <aside className="issuer-sidebar">
+        <div className="issuer-profile"><div className="issuer-avatar">AI</div><div><b>ABC Institute</b><span>Issuer account</span></div></div>
+        <button className={step==="dashboard"?"active":""} onClick={()=>setStep("dashboard")}><span>01</span> Dashboard</button>
+        <button className={step==="issue"?"active":""} onClick={()=>setStep("issue")}><span>02</span> Issue certificate</button>
+        <button className={step==="ready"?"active":""} onClick={()=>setStep("ready")} disabled={!created}><span>03</span> Latest certificate</button>
+        <div className="issuer-sidebar-note"><ShieldCheck size={18}/><span>Every issued credential receives a unique ID and SHA-256 fingerprint.</span></div>
+      </aside>
+
+      <div className="issuer-content">
+        {step==="dashboard" && <motion.div initial={{opacity:0,y:20}} animate={{opacity:1,y:0}}>
+          <div className="issuer-heading"><div><p className="eyebrow"><span/> Institution workspace</p><h1>ISSUER<br/><em>DASHBOARD.</em></h1><p>Issue, track and manage trusted digital credentials from one place.</p></div><button className="issue-primary" onClick={()=>setStep("issue")}>+ ISSUE NEW CERTIFICATE <ArrowUpRight size={17}/></button></div>
+          <div className="issuer-stats">
+            {[["1,284","Total issued","↑ 12% this month"],["1,241","Active","96.6% of issued"],["43","Revoked","3.4% of issued"],["8,492","Verifications","↑ 18% this month"]].map(([v,l,s],i)=><motion.div key={l} initial={{opacity:0,y:15}} animate={{opacity:1,y:0}} transition={{delay:i*.08}}><span>{l}</span><strong>{v}</strong><small>{s}</small></motion.div>)}
+          </div>
+          <div className="issuer-main-grid">
+            <div className="issuer-panel"><div className="panel-title"><div><span>RECENT CERTIFICATES</span><h2>Latest issued</h2></div><button onClick={()=>setStep("issue")}>Issue new <ArrowUpRight size={15}/></button></div>
+              <div className="certificate-list">
+                {[["Arun Kumar","B.E. Computer Science","CC-2026-0842","A+","ACTIVE"],["Meera Priya","B.Sc. Information Technology","CC-2026-0839","A","ACTIVE"],["Rahul Dev","B.E. Cyber Security","CC-2026-0827","A+","ACTIVE"],["Nila Shree","BCA","CC-2026-0814","B+","REVOKED"]].map((x,i)=><div className="certificate-row" key={x[2]}><div className="row-index">0{i+1}</div><div className="row-person"><b>{x[0]}</b><span>{x[1]}</span></div><code>{x[2]}</code><strong>{x[3]}</strong><span className={x[4]==="ACTIVE"?"row-status active":"row-status revoked"}>{x[4]}</span><button onClick={()=>setStep("ready")}><ArrowUpRight size={16}/></button></div>)}
+              </div>
+            </div>
+            <div className="issuer-panel issuer-side-panel"><div className="panel-title"><div><span>VERIFICATION ACTIVITY</span><h2>Today</h2></div></div><div className="activity-number">284</div><p>public verification checks</p><div className="activity-bars">{[42,68,53,84,61,76,92].map((h,i)=><span key={i} style={{height:`${h}%`}}/>)}</div><div className="activity-footer"><span>Blockchain matches</span><b>98.7%</b></div></div>
+          </div>
+        </motion.div>}
+
+        {step==="issue" && <motion.div initial={{opacity:0,x:25}} animate={{opacity:1,x:0}}>
+          <div className="issuer-heading compact"><div><p className="eyebrow"><span/> New credential</p><h1>ISSUE<br/><em>CERTIFICATE.</em></h1><p>Enter the achievement details. CertiChain will create the document, fingerprint it and prepare its verification proof.</p></div><button className="text-back" onClick={()=>setStep("dashboard")}>← Dashboard</button></div>
+          <div className="issue-layout">
+            <div className="issue-form issuer-panel">
+              <div className="form-section-title"><span>01</span><div><b>RECIPIENT</b><small>Who is receiving this credential?</small></div></div>
+              <label>Student name<input value={student} onChange={e=>setStudent(e.target.value)} placeholder="e.g. Arun Kumar"/></label>
+              <label>Email address<input value={email} onChange={e=>setEmail(e.target.value)} placeholder="student@example.com" type="email"/></label>
+              <div className="form-section-title second"><span>02</span><div><b>CREDENTIAL</b><small>Define what the certificate proves.</small></div></div>
+              <label>Certificate type<select value={type} onChange={e=>setType(e.target.value)}><option>Certificate of Achievement</option><option>Course Completion</option><option>Internship Certificate</option><option>Academic Excellence</option></select></label>
+              <label>Course / program<input value={course} onChange={e=>setCourse(e.target.value)} /></label>
+              <div className="form-two"><label>Grade<select value={grade} onChange={e=>setGrade(e.target.value)}><option>A+</option><option>A</option><option>B+</option><option>B</option></select></label><label>Issue date<input value={issued} onChange={e=>setIssued(e.target.value)} /></label></div>
+              <button className="generate-button" onClick={issue} disabled={!student.trim()}>GENERATE CERTIFICATE <ArrowUpRight size={18}/></button>
+            </div>
+            <div className="issue-preview issuer-panel"><div className="panel-title"><div><span>LIVE PREVIEW</span><h2>Credential</h2></div><CertificateIllustration variant="hero"/></div><div className="preview-sheet"><span>CERTICHAIN</span><small>{type.toUpperCase()}</small><h3>{student || "Student Name"}</h3><p>has successfully completed</p><b>{course}</b><div className="preview-grade">{grade}</div><div><span>ISSUED BY</span> ABC INSTITUTE <span>ID</span> PENDING</div></div><div className="preview-note"><ShieldCheck size={17}/><span>Fingerprint and blockchain anchor are generated after you issue.</span></div></div>
+          </div>
+        </motion.div>}
+
+        {step==="ready" && <motion.div initial={{opacity:0,y:20}} animate={{opacity:1,y:0}}>
+          <div className="ready-banner"><div><p className="eyebrow"><span/> Issuance complete</p><h1>CERTIFICATE<br/><em>READY.</em></h1><p>Your credential has a unique identity, a SHA-256 fingerprint and a blockchain anchor.</p></div><div className="ready-check"><Check size={34}/><span>ANCHORED</span></div></div>
+          <div className="ready-grid">
+            <div className="issuer-panel generated-sheet"><div className="generated-top"><span>CERTICHAIN</span><span>VERIFIED CREDENTIAL</span></div><div className="generated-body"><div className="mini-seal"><Check size={24}/></div><small>{type.toUpperCase()}</small><h2>{student || "Arun Kumar"}</h2><p>has successfully completed</p><strong>{course}</strong><div className="generated-grade"><span>FINAL GRADE</span><b>{grade}</b></div><div className="generated-meta"><span>ISSUED BY <b>ABC Institute</b></span><span>DATE <b>{issued}</b></span><span>ID <b>CC-2026-0917</b></span></div></div><div className="generated-bottom"><div><span>SHA-256 FINGERPRINT</span><code>9f83d4a1...71ab</code></div><QrCode size={62}/></div></div>
+            <div className="ready-details"><div className="issuer-panel proof-status"><span>ISSUANCE PROOF</span><h2>Ready to trust.</h2>{[["CERTIFICATE ID","CC-2026-0917"],["SHA-256","9f83d4a1...71ab"],["BLOCKCHAIN","ANCHORED ✓"],["QR VERIFICATION","GENERATED ✓"]].map(x=><div key={x[0]}><span>{x[0]}</span><b>{x[1]}</b></div>)}</div><div className="ready-actions"><button onClick={()=>alert("Certificate download is ready for backend PDF generation.")}>DOWNLOAD <ArrowUpRight size={16}/></button><button onClick={()=>alert("Verification link copied.")}>SHARE <ArrowUpRight size={16}/></button><button className="dark" onClick={()=>{window.history.pushState({}, "", "/verify"); location.reload()}}>VERIFY CERTIFICATE <ArrowUpRight size={16}/></button><button onClick={()=>setStep("dashboard")}>BACK TO DASHBOARD</button></div></div></div>
+        </motion.div>}
+      </div>
+    </section>
+  </main>;
+}
+
 function VerifyPage({ onBack }: { onBack: () => void }) {
   const [mode, setMode] = useState<"id" | "qr">("id");
   const [certificateId, setCertificateId] = useState(demoCertificate.id);
@@ -231,6 +309,7 @@ export default function App() {
   }, []);
 
   if (route === "/verify") return <VerifyPage onBack={() => { window.history.pushState({}, "", "/"); setRoute("/"); }} />;
+  if (route === "/issuer") return <IssuerPage onBack={() => { window.history.pushState({}, "", "/"); setRoute("/"); }} />;
 
   const [tampered, setTampered] = useState(false);
   const [footerMode, setFooterMode] = useState<keyof typeof footerModes>("verify");
@@ -254,7 +333,7 @@ export default function App() {
           <p className="eyebrow"><span/> Digital certificate verification</p>
           <h1>VERIFY<br/><em>WHAT’S REAL.</em></h1>
           <p className="hero-lede">Certificates should prove achievement — not create doubt. CertiChain makes authenticity visible in seconds.</p>
-          <div className="hero-actions"><button className="button button-dark route-button" onClick={() => { window.history.pushState({}, "", "/verify"); setRoute("/verify"); }}>VERIFY CERTIFICATE <ArrowUpRight size={18}/></button><a className="button button-light" href="#issue">ISSUE CERTIFICATE</a></div>
+          <div className="hero-actions"><button className="button button-dark route-button" onClick={() => { window.history.pushState({}, "", "/verify"); setRoute("/verify"); }}>VERIFY CERTIFICATE <ArrowUpRight size={18}/></button><button className="button button-light route-button" onClick={() => { window.history.pushState({}, "", "/issuer"); setRoute("/issuer"); }}>ISSUE CERTIFICATE</button></div>
           <div className="hero-proof"><ShieldCheck size={19}/><span>Cryptographic fingerprint + blockchain anchor</span></div>
         </motion.div>
         <motion.div className="hero-art" initial={{opacity:0,scale:.94,y:20}} animate={{opacity:1,scale:1,y:0}} transition={{duration:.8,ease:"easeOut"}}><CertificateIllustration variant="hero"/></motion.div>
@@ -287,7 +366,7 @@ export default function App() {
       <section className="audience section-pad" id="for">
         <div className="section-kicker">WHO IT SERVES / 05</div>
         <div className="audience-grid">
-          <article><span>01</span><h3>Institutions</h3><p>Issue trusted certificates, keep a clean verification trail and revoke when necessary.</p><a href="#issue">Issuer portal <ArrowUpRight size={17}/></a></article>
+          <article><span>01</span><h3>Institutions</h3><p>Issue trusted certificates, keep a clean verification trail and revoke when necessary.</p><button className="inline-link route-button" onClick={() => { window.history.pushState({}, "", "/issuer"); setRoute("/issuer"); }}>Issuer portal <ArrowUpRight size={17}/></button></article>
           <article><span>02</span><h3>Students</h3><p>Carry one certificate proof that can be shared without asking someone to manually confirm it.</p><button className="inline-link route-button" onClick={() => { window.history.pushState({}, "", "/verify"); setRoute("/verify"); }}>My certificate <ArrowUpRight size={17}/></button></article>
           <article><span>03</span><h3>Verifiers</h3><p>Scan a QR or enter an ID and know whether the document is original, tampered or revoked.</p><button className="inline-link route-button" onClick={() => { window.history.pushState({}, "", "/verify"); setRoute("/verify"); }}>Verify now <ArrowUpRight size={17}/></button></article>
         </div>
@@ -306,7 +385,7 @@ export default function App() {
             <motion.div key={footerMode} initial={{opacity:0,y:12}} animate={{opacity:1,y:0}} transition={{duration:.25}}>
               <p className="footer-panel-kicker">CERTICHAIN / {footer.label}</p>
               <h3>{footer.title}</h3><p>{footer.text}</p>
-              <a href={footerMode==="issue" ? "#issue" : "#verify"} className="footer-action">{footer.action} <ArrowUpRight size={17}/></a>
+              <button className="footer-action route-button" onClick={() => { window.history.pushState({}, "", footerMode==="issue" ? "/issuer" : "/verify"); setRoute(footerMode==="issue" ? "/issuer" : "/verify"); }}>{footer.action} <ArrowUpRight size={17}/></button>
             </motion.div>
           </div>
         </div>
