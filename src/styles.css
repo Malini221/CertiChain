@@ -186,3 +186,9 @@
   .verifier-tools{align-items:flex-start;flex-direction:column;gap:8px}
   .portal-qr-modal{padding:25px}
 }
+
+
+/* Exact Secure Server Cuate illustration */
+.landing-proof-art{display:flex;justify-content:center;align-items:center;min-height:430px}
+.landing-proof-art img{display:block;width:100%;max-width:650px;height:auto;object-fit:contain}
+@media(max-width:900px){.landing-proof-art{min-height:0}.landing-proof-art img{max-width:560px;margin:auto}}
