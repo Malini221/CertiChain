@@ -308,12 +308,12 @@ export default function App() {
     return () => window.removeEventListener("popstate", onPop);
   }, []);
 
-  if (route === "/verify") return <VerifyPage onBack={() => { window.history.pushState({}, "", "/"); setRoute("/"); }} />;
-  if (route === "/issuer") return <IssuerPage onBack={() => { window.history.pushState({}, "", "/"); setRoute("/"); }} />;
-
   const [tampered, setTampered] = useState(false);
   const [footerMode, setFooterMode] = useState<keyof typeof footerModes>("verify");
   const { scrollYProgress } = useScroll();
+
+  if (route === "/verify") return <VerifyPage onBack={() => { window.history.pushState({}, "", "/"); setRoute("/"); }} />;
+  if (route === "/issuer") return <IssuerPage onBack={() => { window.history.pushState({}, "", "/"); setRoute("/"); }} />;
   const heroY = useTransform(scrollYProgress, [0, 0.18], [0, -80]);
   const footer = footerModes[footerMode];
 
