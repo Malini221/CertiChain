@@ -3,6 +3,7 @@ import { ArrowUpRight, Check, Download, Menu, QrCode, RotateCcw, Share2, ShieldC
 import QRCode from "qrcode";
 import { useEffect, useState } from "react";
 
+// @ts-ignore
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:4000";
 import { CertificateIllustration } from "./components/CertificateIllustration";
 import { HolderPortal, VerifierPortal } from "./components/PortalPages";
@@ -69,10 +70,7 @@ async function certificateFingerprint(certificate: {
   }));
 }
 
-function navigateTo(path: string) {
-  window.history.pushState({}, "", path);
-  window.dispatchEvent(new PopStateEvent("popstate"));
-}
+
 
 function verificationUrl(id: string) {
   return `${window.location.origin}/verify/${encodeURIComponent(id)}`;
@@ -610,7 +608,7 @@ export default function App() {
   if (route === "/holder") return <HolderPortal onBack={() => navigateTo("/")} />;
   if (route === "/verifier") return <VerifierPortal onBack={() => navigateTo("/")} />;
   if (route === "/issuer") return <IssuerPage onBack={() => navigateTo("/")} />;
-  const heroY = useTransform(scrollYProgress, [0, 0.18], [0, -80]);
+
   const footer = footerModes[footerMode];
 
   return (
