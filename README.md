@@ -22,3 +22,18 @@ Core landing flow:
 8. Final trust statement
 
 The frontend is intentionally presentation-first so backend verification APIs can be connected next.
+
+
+## Illustration language
+The illustration system now follows the supplied Pana / Cuate / Rafiki-style references:
+- Flat 2D editorial vector scenes
+- Warm yellow as the primary accent
+- Charcoal / blue-gray outlines and clothing
+- Coral and peach skin tones
+- White and light-gray interface surfaces
+- Rounded browser, phone, certificate and document shapes
+- Friendly simplified human characters
+- Small floating communication / location / document motifs
+- Subtle Framer Motion floating and entrance movement
+
+The same visual language is intended for future Verify, Issuer and certificate-detail screens so the product feels like one consistent system.
